@@ -61,6 +61,8 @@ export async function forgeCommand(): Promise<void> {
             license: answers.license
         });
 
+        console.time('⏱️  Prompt time');
+
         // Push local code
         const { shouldPush } = await inquirer.prompt([
             {
@@ -70,6 +72,8 @@ export async function forgeCommand(): Promise<void> {
                 default: true
             }
         ]);
+
+        console.timeEnd('⏱️  Prompt time')
 
         if (shouldPush) {
             const gitService = new GitService();

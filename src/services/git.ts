@@ -59,8 +59,8 @@ export class GitService {
 
     async isGitRepository(): Promise<boolean> {
         try {
-            await this.git.status();
-            return true;
+            // Quick check - just look for .git folder
+            return existsSync('.git');
         } catch {
             return false;
         }
