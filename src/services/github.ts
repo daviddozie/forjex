@@ -1,4 +1,5 @@
 import { Octokit } from '@octokit/rest';
+import open from 'open';
 import { createOAuthDeviceAuth } from '@octokit/auth-oauth-device';
 import chalk from 'chalk';
 import { logger } from '../utils/logger.js';
@@ -15,23 +16,26 @@ export class GitHubService {
 
         if (config && isTokenValid(config)) {
             this.octokit = new Octokit({ auth: config.token });
-            logger.info('Using saved authentication');
+            logger.success('🔑 Already authenticated with GitHub');
             return;
         }
 
-        const spinner = logger.spinner('Authenticating with GitHub...');
+        const spinner = logger.spinner('⏳Authenticating with GitHub...');
 
         try {
             const auth = createOAuthDeviceAuth({
                 clientType: 'oauth-app',
                 clientId: CLIENT_ID,
                 scopes: ['repo', 'workflow'],
-                onVerification: (verification) => {
+                onVerification: async (verification) => {
                     spinner.stop();
                     console.log('\n');
-                    logger.info(`Please open: ${chalk.cyan(verification.verification_uri)}`);
+                    logger.info(`Opening browser to: ${chalk.cyan(verification.verification_uri)}`);
                     logger.info(`Enter code: ${chalk.bold.yellow(verification.user_code)}`);
                     console.log('\n');
+
+                    await open(verification.verification_uri);
+                    spinner.start('🔄 Waiting for authorization...');
                 }
             });
 
@@ -39,7 +43,7 @@ export class GitHubService {
 
             saveConfig({
                 token,
-                expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000) // 1 year
+                expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000)
             });
 
             this.octokit = new Octokit({ auth: token });
@@ -60,9 +64,7 @@ export class GitHubService {
                 name: options.name,
                 description: options.description,
                 private: options.isPrivate,
-                auto_init: options.addReadme,
-                license_template: options.license,
-                gitignore_template: options.gitignore
+                auto_init: false,
             });
 
             spinner.succeed(`Repository created: ${data.html_url}`);

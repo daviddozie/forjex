@@ -54,6 +54,13 @@ export async function forgeCommand(): Promise<void> {
         // Create repository
         const repoUrl = await githubService.createRepository(answers);
 
+        const gitService = new GitService();
+        gitService.createLocalFiles({
+            readme: answers.addReadme,
+            gitignore: answers.gitignore,
+            license: answers.license
+        });
+
         // Push local code
         const { shouldPush } = await inquirer.prompt([
             {

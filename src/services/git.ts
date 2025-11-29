@@ -1,5 +1,6 @@
 import simpleGit, { SimpleGit } from 'simple-git';
 import { logger } from '../utils/logger.js';
+import { writeFileSync, existsSync } from 'fs';
 
 export class GitService {
     private git: SimpleGit;
@@ -8,11 +9,36 @@ export class GitService {
         this.git = simpleGit(workingDir);
     }
 
+    createLocalFiles(options: { readme?: boolean; gitignore?: string; license?: string }): void {
+        const spinner = logger.spinner('📦 Creating project files...');
+
+        if (options.readme && !existsSync('README.md')) {
+            writeFileSync('README.md', '# Project\n\nCreated with Forjex CLI\n');
+        }
+
+        if (options.gitignore) {
+            const templates: Record<string, string> = {
+                Node: 'node_modules/\n.env\ndist/\n*.log\n',
+                Python: '__pycache__/\n*.py[cod]\n.env\nvenv/\n',
+                Java: '*.class\ntarget/\n.gradle/\nbuild/\n',
+                Go: 'bin/\n*.exe\n.env\n',
+                Rust: 'target/\nCargo.lock\n'
+            };
+
+            if (templates[options.gitignore] && !existsSync('.gitignore')) {
+                writeFileSync('.gitignore', templates[options.gitignore]);
+            }
+        }
+
+        spinner.succeed('📁 Project files created');
+    }
+
     async initAndPush(repoUrl: string): Promise<void> {
         const spinner = logger.spinner('Initializing git repository...');
 
         try {
             await this.git.init();
+            await this.git.checkoutLocalBranch('main');
             spinner.text = 'Adding files...';
 
             await this.git.add('.');
