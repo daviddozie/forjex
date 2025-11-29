@@ -2,9 +2,21 @@ import inquirer from 'inquirer';
 import { GitHubService } from '../services/github.js';
 import { GitService } from '../services/git.js';
 import { logger } from '../utils/logger.js';
+import figlet from 'figlet';
+import chalk from 'chalk';
 import type { RepoOptions } from '../types/index.js';
 
 export async function forgeCommand(): Promise<void> {
+    // Display FORJEX banner
+    console.log(
+        chalk.cyan(
+            figlet.textSync('FORJEX', {
+                font: 'Big',
+                horizontalLayout: 'default'
+            })
+        )
+    );
+    console.log('\n');
     try {
         // Authenticate
         const githubService = new GitHubService();
