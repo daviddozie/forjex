@@ -3,6 +3,7 @@ import { existsSync, writeFileSync } from 'fs';
 import { logger } from '../utils/logger.js';
 import { saveConfig, loadConfig } from '../utils/config.js';
 import type { ProjectConfig, VercelDeployment } from '../types/index.js';
+import chalk from 'chalk';
 
 export class VercelService {
     private isAuthenticated: boolean = false;
@@ -30,8 +31,7 @@ export class VercelService {
             spinner.stop();
             console.log('\n');
             logger.info('🔐 Opening browser to authenticate with Vercel...');
-            logger.info('Please follow the prompts in your browser');
-            console.log('\n');
+            console.log(chalk.yellow.bold('\n  ⚡ Press [ENTER] to open your browser\n'));
 
             // Login with Vercel CLI (opens browser)
             execSync('vercel login', { stdio: 'inherit' });
