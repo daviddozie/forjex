@@ -4,14 +4,15 @@ import { GitService } from '../services/git.js';
 import { logger } from '../utils/logger.js';
 import figlet from 'figlet';
 import chalk from 'chalk';
-import type { RepoOptions } from '../types/index.js';
+import { ProjectDetector } from '../services/detector.js';
+import { CICDGenerator } from '../services/cicd.js';
 
 export async function forgeCommand(): Promise<void> {
     // Display FORJEX banner
     console.log(
         chalk.cyan(
             figlet.textSync('FORJEX', {
-                font: 'Big',
+                font: '3D-ASCII',
                 horizontalLayout: 'default'
             })
         )
@@ -60,6 +61,12 @@ export async function forgeCommand(): Promise<void> {
                 message: 'Choose a license:',
                 choices: ['None', 'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD-3-Clause'],
                 filter: (val) => val === 'None' ? undefined : val
+            },
+            {
+                type: 'confirm',
+                name: 'addCICD',
+                message: 'Add CI/CD pipeline (GitHub Actions)?',
+                default: true
             }
         ]);
 
@@ -72,6 +79,19 @@ export async function forgeCommand(): Promise<void> {
             gitignore: answers.gitignore,
             license: answers.license
         });
+
+        // Generate CI/CD pipeline if requested
+        if (answers.addCICD) {
+            const detector = new ProjectDetector();
+            const projectConfig = detector.detect();
+
+            if (projectConfig.type !== 'unknown') {
+                const cicdGenerator = new CICDGenerator(projectConfig);
+                cicdGenerator.generate();
+            } else {
+                logger.warn('⚠️  Skipping CI/CD: Could not detect project type');
+            }
+        }
 
         console.time('⏱️  Prompt time');
 
@@ -102,13 +122,19 @@ export async function forgeCommand(): Promise<void> {
                         default: false
                     }
                 ]);
-                if (!forceReinit) return;
+                if (!forceReinit) {
+                    console.log('\n');
+                    logger.success('🎉 Repository created! Visit: ' + chalk.cyan(repoUrl));
+                    return;
+                }
             }
 
             await gitService.initAndPush(repoUrl);
         }
 
-        logger.success('\n🎉 All done! Your repository is ready.');
+        console.log('\n');
+        logger.success('🎉 All done! Your repository is ready.');
+        logger.info(`Visit: ${chalk.cyan(repoUrl)}`);
     } catch (error: any) {
         logger.error(error.message || 'An error occurred');
         process.exit(1);
