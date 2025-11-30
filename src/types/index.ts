@@ -6,11 +6,15 @@ export interface RepoOptions {
     license?: string;
     gitignore?: string;
     addCICD?: boolean;
+    pushToGitHub?: boolean;
+    deployToVercel?: boolean;
 }
 
 export interface AuthConfig {
     token?: string;
     expiresAt?: number;
+    vercelToken?: string;
+    vercelTeamId?: string;
 }
 
 export interface ProjectConfig {
@@ -19,4 +23,11 @@ export interface ProjectConfig {
     hasTests?: boolean;
     buildCommand?: string;
     testCommand?: string;
+    framework?: string;
+}
+
+export interface VercelDeployment {
+    url: string;
+    deploymentUrl: string;
+    projectId: string;
 }
