@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync, existsSync } from 'fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs';
 import { logger } from '../utils/logger.js';
 import type { ProjectConfig } from '../types/index.js';
 
@@ -43,7 +43,7 @@ export class CICDGenerator {
 
             // Write workflow file
             writeFileSync('.github/workflows/ci.yml', workflowContent);
-            spinner.succeed('✅ CI/CD pipeline created: .github/workflows/ci.yml');
+            spinner.succeed('CI/CD pipeline created: .github/workflows/ci.yml');
         } catch (error: any) {
             spinner.fail('Failed to generate CI/CD pipeline');
             throw error;
@@ -52,6 +52,14 @@ export class CICDGenerator {
 
     private generateNodeWorkflow(): string {
         const { packageManager, hasTests, buildCommand, testCommand } = this.config;
+
+        // Only enable cache if lock file exists
+        const cacheConfig = this.hasLockFile(packageManager!)
+            ? `cache: '${packageManager}'`
+            : '';
+
+        // Check if build script exists
+        const hasBuildScript = this.hasBuildScript();
 
         return `name: CI/CD Pipeline
 
@@ -76,8 +84,8 @@ jobs:
     - name: 🔧 Setup Node.js $\{{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
-        node-version: $\{{ matrix.node-version }}
-        cache: '${packageManager}'
+        node-version: $\{{ matrix.node-version }}${cacheConfig ? `
+        ${cacheConfig}` : ''}
 
     - name: 📥 Install dependencies
       run: ${this.getInstallCommand(packageManager!)}
@@ -88,9 +96,9 @@ jobs:
 ${hasTests ? `
     - name: 🧪 Run tests
       run: ${testCommand}
-` : ''}
+` : ''}${hasBuildScript ? `
     - name: 🏗️  Build project
-      run: ${buildCommand}
+      run: ${buildCommand}` : ''}
 `;
     }
 
@@ -222,6 +230,27 @@ jobs:
     - name: 🏗️  Build project
       run: cargo build --release --verbose
 `;
+    }
+
+    private hasLockFile(packageManager: string): boolean {
+        const lockFiles: Record<string, string> = {
+            npm: 'package-lock.json',
+            yarn: 'yarn.lock',
+            pnpm: 'pnpm-lock.yaml',
+            bun: 'bun.lockb'
+        };
+
+        const lockFile = lockFiles[packageManager];
+        return lockFile ? existsSync(lockFile) : false;
+    }
+
+    private hasBuildScript(): boolean {
+        try {
+            const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
+            return !!packageJson.scripts?.build;
+        } catch {
+            return false;
+        }
     }
 
     private getInstallCommand(packageManager: string): string {

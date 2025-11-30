@@ -12,7 +12,7 @@ export async function forgeCommand(): Promise<void> {
     console.log(
         chalk.cyan(
             figlet.textSync('FORJEX', {
-                font: '3D-ASCII',
+                font: 'Doom',
                 horizontalLayout: 'default'
             })
         )
