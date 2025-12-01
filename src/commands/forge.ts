@@ -30,17 +30,20 @@ export async function forgeCommand(): Promise<void> {
             {
                 type: 'checkbox',
                 name: 'actions',
-                message: 'What would you like to do?',
+                message: 'What would you like forjex to do for you?',
                 choices: [
-                    { name: 'Push to GitHub', value: 'github', checked: true },
-                    { name: 'Add CI/CD pipeline (GitHub Actions)', value: 'cicd', checked: true },
-                    { name: 'Deploy to Vercel', value: 'vercel', checked: true }
+                    { name: '✨ Create a new GitHub repository', value: 'github-new', checked: true },
+                    { name: '🔗 Push to an existing GitHub repository', value: 'github-existing' },
+                    { name: '⚙️  Add CI/CD pipeline (GitHub Actions)', value: 'cicd', checked: true },
+                    { name: '🚀 Deploy to Vercel', value: 'vercel', checked: true }
                 ],
                 validate: (choices) => choices.length > 0 || 'Please select at least one action'
             }
         ]);
 
-        const shouldPushToGitHub = actions.includes('github');
+        const shouldCreateNewRepo = actions.includes('github-new');
+        const shouldPushToExisting = actions.includes('github-existing');
+        const shouldPushToGitHub = shouldCreateNewRepo || shouldPushToExisting;
         const shouldAddCICD = actions.includes('cicd');
         const shouldDeployToVercel = actions.includes('vercel');
 
@@ -54,51 +57,10 @@ export async function forgeCommand(): Promise<void> {
 
             console.log('\n');
 
-            // Check if current directory already has a git remote
-            const gitService = new GitService();
-            const existingRemote = await gitService.getRemoteUrl();
+            if (shouldCreateNewRepo) {
+                // Create new repository
+                const gitService = new GitService();
 
-            let repoChoice = 'new';
-
-            if (existingRemote) {
-                // Already has a remote, ask if they want to use it
-                const { useExisting } = await inquirer.prompt([
-                    {
-                        type: 'confirm',
-                        name: 'useExisting',
-                        message: `Found existing remote: ${chalk.cyan(existingRemote)}\nUse this repository?`,
-                        default: true
-                    }
-                ]);
-
-                if (useExisting) {
-                    repoUrl = existingRemote;
-                    repoChoice = 'existing';
-                    logger.success(`✅ Using existing repository`);
-                    console.log('\n');
-                }
-            }
-
-            // If no existing remote or user declined, ask what to do
-            if (!repoUrl) {
-                const { choice } = await inquirer.prompt([
-                    {
-                        type: 'list',
-                        name: 'choice',
-                        message: 'What would you like to do?',
-                        choices: [
-                            { name: '✨ Create a new repository', value: 'new' },
-                            { name: '🔗 Enter an existing repository URL', value: 'existing' }
-                        ],
-                        default: 'new'
-                    }
-                ]);
-
-                repoChoice = choice;
-            }
-
-            if (repoChoice === 'new' && !repoUrl) {
-                // Collect repository details for new repo
                 const answers = await inquirer.prompt<RepoOptions>([
                     {
                         type: 'input',
@@ -150,24 +112,49 @@ export async function forgeCommand(): Promise<void> {
                     gitignore: answers.gitignore,
                     license: answers.license
                 });
-            } else if (repoChoice === 'existing' && !repoUrl) {
-                // Manual entry of existing repository
-                const { existingRepoUrl } = await inquirer.prompt([
-                    {
-                        type: 'input',
-                        name: 'existingRepoUrl',
-                        message: 'Enter the existing repository URL:',
-                        validate: (input) => {
-                            if (!input) return 'Repository URL is required';
-                            if (!input.includes('github.com')) return 'Please enter a valid GitHub repository URL';
-                            return true;
-                        }
-                    }
-                ]);
 
-                repoUrl = existingRepoUrl;
-                logger.info(`Using repository: ${chalk.cyan(repoUrl)}`);
-                console.log('\n');
+            } else if (shouldPushToExisting) {
+                // Push to existing repository
+                const gitService = new GitService();
+                const existingRemote = await gitService.getRemoteUrl();
+
+                if (existingRemote) {
+                    // Found existing remote
+                    const { useExisting } = await inquirer.prompt([
+                        {
+                            type: 'confirm',
+                            name: 'useExisting',
+                            message: `Found existing remote: ${chalk.cyan(existingRemote)}\nUse this repository?`,
+                            default: true
+                        }
+                    ]);
+
+                    if (useExisting) {
+                        repoUrl = existingRemote;
+                        logger.success(`✅ Using existing repository`);
+                        console.log('\n');
+                    }
+                }
+
+                // If no remote found or user declined
+                if (!repoUrl) {
+                    const { existingRepoUrl } = await inquirer.prompt([
+                        {
+                            type: 'input',
+                            name: 'existingRepoUrl',
+                            message: 'Enter the existing repository URL:',
+                            validate: (input) => {
+                                if (!input) return 'Repository URL is required';
+                                if (!input.includes('github.com')) return 'Please enter a valid GitHub repository URL';
+                                return true;
+                            }
+                        }
+                    ]);
+
+                    repoUrl = existingRepoUrl;
+                    logger.info(`Using repository: ${chalk.cyan(repoUrl)}`);
+                    console.log('\n');
+                }
             }
         }
 
@@ -222,8 +209,14 @@ export async function forgeCommand(): Promise<void> {
                 if (!forceReinit) {
                     console.log('\n');
                     logger.success('🎉 Setup complete!');
-                    if (repoUrl) logger.info(`GitHub: ${chalk.cyan(repoUrl)}`);
-                    if (vercelUrl) logger.info(`Vercel: ${chalk.cyan(vercelUrl)}`);
+                    if (repoUrl) {
+                        console.log(chalk.gray('  📦 GitHub Repository:'));
+                        console.log(chalk.cyan.bold(`     ${repoUrl}\n`));
+                    }
+                    if (vercelUrl) {
+                        console.log(chalk.gray('  🚀 Live Deployment:'));
+                        console.log(chalk.magenta.bold(`     ${vercelUrl}\n`));
+                    }
                     return;
                 }
             }
@@ -233,7 +226,7 @@ export async function forgeCommand(): Promise<void> {
 
         // Final summary
         console.log('\n');
-        logger.success('🎉 All done! Your project is ready.');
+        logger.success('🎉 All done! Your project is ready.\n');
         if (repoUrl) {
             console.log(chalk.gray('  📦 GitHub Repository:'));
             console.log(chalk.cyan.bold(`     ${repoUrl}\n`));
