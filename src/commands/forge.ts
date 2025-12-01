@@ -87,9 +87,10 @@ export async function forgeCommand(): Promise<void> {
                         name: 'choice',
                         message: 'What would you like to do?',
                         choices: [
-                            { name: 'Create a new repository', value: 'new' },
-                            { name: 'Enter an existing repository URL', value: 'existing' }
-                        ]
+                            { name: '✨ Create a new repository', value: 'new' },
+                            { name: '🔗 Enter an existing repository URL', value: 'existing' }
+                        ],
+                        default: 'new'
                     }
                 ]);
 

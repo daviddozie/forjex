@@ -17,18 +17,16 @@ export class VercelService {
             return;
         }
 
-        const spinner = logger.spinner('⏳ Authenticating with Vercel...');
-
         try {
             // Check if Vercel CLI is installed
             try {
                 execSync('vercel --version', { stdio: 'ignore' });
             } catch {
-                spinner.info('Installing Vercel CLI...');
+                const spinner = logger.spinner('Installing Vercel CLI...');
                 execSync('npm install -g vercel', { stdio: 'inherit' });
+                spinner.succeed('Vercel CLI installed');
             }
 
-            spinner.stop();
             console.log('\n');
             logger.info('🔐 Opening browser to authenticate with Vercel...');
             console.log(chalk.yellow.bold('\n  ⚡ Press [ENTER] to open your browser\n'));
@@ -36,20 +34,17 @@ export class VercelService {
             // Login with Vercel CLI (opens browser)
             execSync('vercel login', { stdio: 'inherit' });
 
-            // Get token after login
-            const token = execSync('vercel token', { encoding: 'utf-8' }).trim();
-
-            // Save token
+            // Save a placeholder token (Vercel CLI handles auth internally)
             const currentConfig = loadConfig() || {};
             saveConfig({
                 ...currentConfig,
-                vercelToken: token
+                vercelToken: 'authenticated' // Just mark as authenticated
             });
 
             this.isAuthenticated = true;
             logger.success('✅ Vercel authentication successful!');
         } catch (error: any) {
-            spinner.fail('Vercel authentication failed');
+            logger.error('Vercel authentication failed');
             throw error;
         }
     }
@@ -67,9 +62,9 @@ export class VercelService {
 
             spinner.text = '📦 Building project...';
 
-            // Deploy to Vercel with --yes flag to skip prompts
+            // Deploy to Vercel (CLI is already authenticated)
             const deployOutput = execSync(
-                'vercel --prod --yes --token $(vercel token)',
+                'vercel --prod --yes',  // Removed --token flag
                 {
                     encoding: 'utf-8',
                     stdio: 'pipe'
@@ -80,7 +75,8 @@ export class VercelService {
             const urlMatch = deployOutput.match(/https:\/\/[^\s]+/);
             const deploymentUrl = urlMatch ? urlMatch[0] : '';
 
-            spinner.succeed(`Deployed to Vercel: ${deploymentUrl}`);
+            spinner.succeed(`✅ Deployed to Vercel`);
+            console.log(chalk.magenta.bold(`   ${deploymentUrl}\n`));
 
             return {
                 url: deploymentUrl,
