@@ -11,7 +11,6 @@ import type { RepoOptions } from '../types/index.js';
 
 export async function forgeCommand(): Promise<void> {
     try {
-        // Display FORJEX banner
         console.log('\n');
         console.log(
             chalk.cyan.bold(
@@ -50,7 +49,6 @@ export async function forgeCommand(): Promise<void> {
         let githubService: GitHubService | null = null;
         let repoUrl: string = '';
 
-        // GitHub Setup (if selected)
         if (shouldPushToGitHub) {
             githubService = new GitHubService();
             await githubService.authenticate();
@@ -58,7 +56,6 @@ export async function forgeCommand(): Promise<void> {
             console.log('\n');
 
             if (shouldCreateNewRepo) {
-                // Create new repository
                 const gitService = new GitService();
 
                 const answers = await inquirer.prompt<RepoOptions>([
@@ -103,10 +100,8 @@ export async function forgeCommand(): Promise<void> {
 
                 console.log('\n');
 
-                // Create repository
                 repoUrl = await githubService.createRepository(answers);
 
-                // Create files locally
                 gitService.createLocalFiles({
                     readme: answers.addReadme,
                     gitignore: answers.gitignore,
@@ -114,12 +109,10 @@ export async function forgeCommand(): Promise<void> {
                 });
 
             } else if (shouldPushToExisting) {
-                // Push to existing repository
                 const gitService = new GitService();
                 const existingRemote = await gitService.getRemoteUrl();
 
                 if (existingRemote) {
-                    // Found existing remote
                     const { useExisting } = await inquirer.prompt([
                         {
                             type: 'confirm',
@@ -136,7 +129,6 @@ export async function forgeCommand(): Promise<void> {
                     }
                 }
 
-                // If no remote found or user declined
                 if (!repoUrl) {
                     const { existingRepoUrl } = await inquirer.prompt([
                         {
@@ -158,11 +150,9 @@ export async function forgeCommand(): Promise<void> {
             }
         }
 
-        // Detect project type (needed for CI/CD and Vercel)
         const detector = new ProjectDetector();
         const projectConfig = detector.detect();
 
-        // CI/CD Setup (if selected)
         if (shouldAddCICD) {
             if (projectConfig.type !== 'unknown') {
                 const cicdGenerator = new CICDGenerator(projectConfig);
@@ -172,7 +162,6 @@ export async function forgeCommand(): Promise<void> {
             }
         }
 
-        // Vercel Deployment (if selected)
         let vercelUrl = '';
         if (shouldDeployToVercel) {
             const vercelService = new VercelService();
@@ -185,25 +174,24 @@ export async function forgeCommand(): Promise<void> {
             const deployment = await vercelService.deploy(projectName, projectConfig);
             vercelUrl = deployment.url;
 
-            // Add Vercel to CI/CD if both are selected
             if (shouldAddCICD && repoUrl) {
                 await vercelService.addVercelToGitHubActions(repoUrl);
             }
         }
 
-        // Push to GitHub (if selected)
         if (shouldPushToGitHub && repoUrl) {
             const gitService = new GitService();
             const isRepo = await gitService.isGitRepository();
+            const isExisting = shouldPushToExisting || (isRepo && !shouldCreateNewRepo);
 
-            if (isRepo) {
+            if (isRepo && !isExisting) {
                 logger.warn('Directory is already a git repository');
                 const { forceReinit } = await inquirer.prompt([
                     {
                         type: 'confirm',
                         name: 'forceReinit',
-                        message: 'Reinitialize and push anyway?',
-                        default: false
+                        message: 'Commit and push changes?',
+                        default: true
                     }
                 ]);
                 if (!forceReinit) {
@@ -221,10 +209,9 @@ export async function forgeCommand(): Promise<void> {
                 }
             }
 
-            await gitService.initAndPush(repoUrl);
+            await gitService.initAndPush(repoUrl, isExisting);
         }
 
-        // Final summary
         console.log('\n');
         logger.success('🎉 All done! Your project is ready.\n');
         if (repoUrl) {

@@ -33,24 +33,47 @@ export class GitService {
         spinner.succeed('📁 Project files created');
     }
 
-    async initAndPush(repoUrl: string): Promise<void> {
-        const spinner = logger.spinner('Initializing git repository...');
+    async initAndPush(repoUrl: string, isExistingRepo: boolean = false): Promise<void> {
+        const spinner = logger.spinner('⚙️  Initializing git repository...');
 
         try {
-            await this.git.init();
-            await this.git.checkoutLocalBranch('main');
-            spinner.text = 'Adding files...';
+            if (isExistingRepo) {
+                // For existing repos, just add, commit, and push
+                spinner.text = '📁 Adding files...';
+                await this.git.add('.');
 
-            await this.git.add('.');
-            spinner.text = 'Creating initial commit...';
+                spinner.text = '💾 Creating commit...';
+                await this.git.commit('Update from Forjex');
 
-            await this.git.commit('Initial commit from Forjex');
-            spinner.text = 'Pushing to GitHub...';
+                spinner.text = '🚀 Pushing to GitHub...';
+                await this.git.push('origin', 'main');
 
-            await this.git.addRemote('origin', repoUrl);
-            await this.git.push('origin', 'main', ['--set-upstream']);
+            } else {
+                await this.git.init();
+                try {
+                    await this.git.branch();
+                    const branches = await this.git.branchLocal();
+                    if (!branches.all.includes('main')) {
+                        await this.git.checkoutLocalBranch('main');
+                    } else {
+                        await this.git.checkout('main');
+                    }
+                } catch {
+                    await this.git.checkoutLocalBranch('main');
+                }
 
-            spinner.succeed('Code pushed to GitHub successfully!');
+                spinner.text = '📁 Adding files...';
+                await this.git.add('.');
+
+                spinner.text = '💾 Creating initial commit...';
+                await this.git.commit('Initial commit from Forjex');
+
+                spinner.text = '🚀 Pushing to GitHub...';
+                await this.git.addRemote('origin', repoUrl);
+                await this.git.push('origin', 'main', ['--set-upstream']);
+            }
+
+            spinner.succeed('✅ Code pushed to GitHub successfully!');
         } catch (error: any) {
             spinner.fail('Failed to push to GitHub');
             throw error;
@@ -59,7 +82,6 @@ export class GitService {
 
     async isGitRepository(): Promise<boolean> {
         try {
-            // Quick check - just look for .git folder
             return existsSync('.git');
         } catch {
             return false;
