@@ -3,65 +3,98 @@ import { logger } from '../utils/logger.js';
 import type { ProjectConfig } from '../types/index.js';
 
 export class CICDGenerator {
-    private config: ProjectConfig;
+  private config: ProjectConfig;
 
-    constructor(config: ProjectConfig) {
-        this.config = config;
+  constructor(config: ProjectConfig) {
+    this.config = config;
+  }
+
+  generate(): void {
+    const spinner = logger.spinner('⚙️  Generating CI/CD pipeline...');
+
+    try {
+      // Create .github/workflows directory
+      if (!existsSync('.github')) {
+        mkdirSync('.github');
+      }
+      if (!existsSync('.github/workflows')) {
+        mkdirSync('.github/workflows');
+      }
+
+      // Generate appropriate workflow based on project type
+      let workflowContent = '';
+
+      switch (this.config.type) {
+        case 'nodejs':
+          workflowContent = this.generateNodeWorkflow();
+          break;
+        case 'python':
+          workflowContent = this.generatePythonWorkflow();
+          break;
+        case 'go':
+          workflowContent = this.generateGoWorkflow();
+          break;
+        case 'rust':
+          workflowContent = this.generateRustWorkflow();
+          break;
+        default:
+          throw new Error('Unknown project type');
+      }
+
+      // Write workflow file
+      writeFileSync('.github/workflows/ci.yml', workflowContent);
+      spinner.succeed('CI/CD pipeline created: .github/workflows/ci.yml');
+    } catch (error: any) {
+      spinner.fail('Failed to generate CI/CD pipeline');
+      throw error;
     }
+  }
 
-    generate(): void {
-        const spinner = logger.spinner('⚙️  Generating CI/CD pipeline...');
+  private getNodeVersions(): string {
+    try {
+      if (existsSync('package.json')) {
+        const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
+        const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
 
-        try {
-            // Create .github/workflows directory
-            if (!existsSync('.github')) {
-                mkdirSync('.github');
-            }
-            if (!existsSync('.github/workflows')) {
-                mkdirSync('.github/workflows');
-            }
-
-            // Generate appropriate workflow based on project type
-            let workflowContent = '';
-
-            switch (this.config.type) {
-                case 'nodejs':
-                    workflowContent = this.generateNodeWorkflow();
-                    break;
-                case 'python':
-                    workflowContent = this.generatePythonWorkflow();
-                    break;
-                case 'go':
-                    workflowContent = this.generateGoWorkflow();
-                    break;
-                case 'rust':
-                    workflowContent = this.generateRustWorkflow();
-                    break;
-                default:
-                    throw new Error('Unknown project type');
-            }
-
-            // Write workflow file
-            writeFileSync('.github/workflows/ci.yml', workflowContent);
-            spinner.succeed('CI/CD pipeline created: .github/workflows/ci.yml');
-        } catch (error: any) {
-            spinner.fail('Failed to generate CI/CD pipeline');
-            throw error;
+        // Check for Next.js - requires Node 20+
+        if (deps['next']) {
+          const nextVersion = deps['next'];
+          // Next.js 14+ requires Node 20+
+          if (nextVersion.includes('14') || nextVersion.includes('15')) {
+            return '[20.x, 22.x]';
+          }
         }
+
+        if (packageJson.engines?.node) {
+          const nodeEngine = packageJson.engines.node;
+          const match = nodeEngine.match(/>=?(\d+)/);
+          if (match) {
+            const minVersion = parseInt(match[1]);
+            if (minVersion >= 20) return '[20.x, 22.x]';
+            if (minVersion >= 18) return '[18.x, 20.x, 22.x]';
+          }
+        }
+      }
+    } catch (error) {
+      // Default fallback
     }
 
-    private generateNodeWorkflow(): string {
-        const { packageManager, hasTests, buildCommand, testCommand } = this.config;
+    return '[20.x, 22.x]';
+  }
 
-        // Only enable cache if lock file exists
-        const cacheConfig = this.hasLockFile(packageManager!)
-            ? `cache: '${packageManager}'`
-            : '';
+  private generateNodeWorkflow(): string {
+    const { packageManager, hasTests, buildCommand, testCommand } = this.config;
 
-        // Check if build script exists
-        const hasBuildScript = this.hasBuildScript();
+    // Only enable cache if lock file exists
+    const cacheConfig = this.hasLockFile(packageManager!)
+      ? `cache: '${packageManager}'`
+      : '';
 
-        return `name: CI/CD Pipeline
+    const hasBuildScript = this.hasBuildScript();
+
+    const nodeVersions = this.getNodeVersions();
+
+    return `name: CI/CD Pipeline
 
 on:
   push:
@@ -75,7 +108,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: ${nodeVersions}
 
     steps:
     - name: 📦 Checkout code
@@ -100,12 +133,12 @@ ${hasTests ? `
     - name: 🏗️  Build project
       run: ${buildCommand}` : ''}
 `;
-    }
+  }
 
-    private generatePythonWorkflow(): string {
-        const { hasTests, testCommand } = this.config;
+  private generatePythonWorkflow(): string {
+    const { hasTests, testCommand } = this.config;
 
-        return `name: CI/CD Pipeline
+    return `name: CI/CD Pipeline
 
 on:
   push:
@@ -144,12 +177,12 @@ ${hasTests ? `
     - name: 🧪 Run tests
       run: ${testCommand}
 ` : ''}`;
-    }
+  }
 
-    private generateGoWorkflow(): string {
-        const { hasTests } = this.config;
+  private generateGoWorkflow(): string {
+    const { hasTests } = this.config;
 
-        return `name: CI/CD Pipeline
+    return `name: CI/CD Pipeline
 
 on:
   push:
@@ -189,10 +222,10 @@ ${hasTests ? `
     - name: 🏗️  Build project
       run: go build -v ./...
 `;
-    }
+  }
 
-    private generateRustWorkflow(): string {
-        return `name: CI/CD Pipeline
+  private generateRustWorkflow(): string {
+    return `name: CI/CD Pipeline
 
 on:
   push:
@@ -230,36 +263,36 @@ jobs:
     - name: 🏗️  Build project
       run: cargo build --release --verbose
 `;
-    }
+  }
 
-    private hasLockFile(packageManager: string): boolean {
-        const lockFiles: Record<string, string> = {
-            npm: 'package-lock.json',
-            yarn: 'yarn.lock',
-            pnpm: 'pnpm-lock.yaml',
-            bun: 'bun.lockb'
-        };
+  private hasLockFile(packageManager: string): boolean {
+    const lockFiles: Record<string, string> = {
+      npm: 'package-lock.json',
+      yarn: 'yarn.lock',
+      pnpm: 'pnpm-lock.yaml',
+      bun: 'bun.lockb'
+    };
 
-        const lockFile = lockFiles[packageManager];
-        return lockFile ? existsSync(lockFile) : false;
-    }
+    const lockFile = lockFiles[packageManager];
+    return lockFile ? existsSync(lockFile) : false;
+  }
 
-    private hasBuildScript(): boolean {
-        try {
-            const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
-            return !!packageJson.scripts?.build;
-        } catch {
-            return false;
-        }
+  private hasBuildScript(): boolean {
+    try {
+      const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
+      return !!packageJson.scripts?.build;
+    } catch {
+      return false;
     }
+  }
 
-    private getInstallCommand(packageManager: string): string {
-        const commands: Record<string, string> = {
-            npm: 'npm ci',
-            yarn: 'yarn install --frozen-lockfile',
-            pnpm: 'pnpm install --frozen-lockfile',
-            bun: 'bun install --frozen-lockfile'
-        };
-        return commands[packageManager] || 'npm ci';
-    }
+  private getInstallCommand(packageManager: string): string {
+    const commands: Record<string, string> = {
+      npm: 'npm ci',
+      yarn: 'yarn install --frozen-lockfile',
+      pnpm: 'pnpm install --frozen-lockfile',
+      bun: 'bun install --frozen-lockfile'
+    };
+    return commands[packageManager] || 'npm ci';
+  }
 }
