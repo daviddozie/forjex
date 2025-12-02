@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { existsSync, writeFileSync } from 'fs';
+import { existsSync, writeFileSync, readFileSync } from 'fs';
 import { logger } from '../utils/logger.js';
 import { saveConfig, loadConfig } from '../utils/config.js';
 import type { ProjectConfig, VercelDeployment } from '../types/index.js';
@@ -164,9 +164,8 @@ export class VercelService {
                 return;
             }
 
-            // Read existing workflow
-            const fs = require('fs');
-            let workflow = fs.readFileSync(workflowPath, 'utf-8');
+            // Read existing workflow - use the imports from top of file
+            let workflow = readFileSync(workflowPath, 'utf-8');
 
             // Add Vercel deployment job
             const vercelJob = `
@@ -191,7 +190,7 @@ export class VercelService {
 
             // Append Vercel job to workflow
             workflow += vercelJob;
-            fs.writeFileSync(workflowPath, workflow);
+            writeFileSync(workflowPath, workflow);
 
             spinner.succeed('✅ Vercel deployment added to CI/CD');
 
