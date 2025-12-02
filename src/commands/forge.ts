@@ -171,12 +171,8 @@ export async function forgeCommand(): Promise<void> {
                 ? repoUrl.split('/').pop()?.replace('.git', '') || 'my-project'
                 : process.cwd().split('/').pop() || 'my-project';
 
-            const deployment = await vercelService.deploy(projectName, projectConfig);
+            const deployment = await vercelService.deploy(projectName, projectConfig, repoUrl);
             vercelUrl = deployment.url;
-
-            if (shouldAddCICD && repoUrl) {
-                await vercelService.addVercelToGitHubActions(repoUrl);
-            }
         }
 
         if (shouldPushToGitHub && repoUrl) {
