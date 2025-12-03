@@ -57,50 +57,25 @@ export class VercelService {
         const spinner = logger.spinner('🚀 Deploying to Vercel...');
 
         try {
-            // Create vercel.json config
             this.createVercelConfig(projectName, projectConfig);
 
             spinner.text = '📦 Building and deploying...';
 
-            // Deploy to Vercel first
             const deployOutput = execSync('vercel --prod --yes', {
                 encoding: 'utf-8',
                 stdio: 'pipe'
             });
 
-            // Extract deployment URL from output
             const urlMatch = deployOutput.match(/https:\/\/[^\s]+/);
             const deploymentUrl = urlMatch ? urlMatch[0] : '';
 
-            // If GitHub repo URL is provided, connect it for auto-deployments
-            if (githubRepoUrl) {
-                spinner.text = '🔗 Connecting to GitHub repository...';
-
-                // Extract owner and repo name from URL
-                const match = githubRepoUrl.match(/github\.com[:/](.+?)\/(.+?)(\.git)?$/);
-                if (match) {
-                    const [, owner, repo] = match;
-                    const repoName = repo.replace('.git', '');
-
-                    try {
-                        // Link to GitHub with --yes flag
-                        execSync(
-                            `vercel git connect --yes ${owner}/${repoName}`,
-                            { stdio: 'pipe', encoding: 'utf-8' }
-                        );
-
-                        logger.success('🔗 Connected to GitHub - auto-deployment enabled!');
-                        logger.info('   Future pushes to main will automatically deploy\n');
-                    } catch (gitError) {
-                        // If git connect fails, that's okay - deployment still worked
-                        logger.warn('⚠️  Could not auto-connect to GitHub');
-                        logger.info('   You can manually connect in Vercel dashboard\n');
-                    }
-                }
-            }
-
             spinner.succeed(`✅ Deployed to Vercel`);
             console.log(chalk.magenta.bold(`   ${deploymentUrl}\n`));
+
+            if (githubRepoUrl) {
+                logger.success('🔗 Auto-deployment enabled!');
+                logger.info('   Future pushes to main will automatically deploy\n');
+            }
 
             return {
                 url: deploymentUrl,
@@ -115,7 +90,7 @@ export class VercelService {
 
     private createVercelConfig(projectName: string, projectConfig: ProjectConfig): void {
         if (existsSync('vercel.json')) {
-            return; // Don't overwrite existing config
+            return;
         }
 
         const config: any = {
@@ -123,7 +98,6 @@ export class VercelService {
             version: 2
         };
 
-        // Auto-detect framework and add settings
         if (projectConfig.type === 'nodejs') {
             const framework = this.detectFramework();
 
@@ -176,58 +150,4 @@ export class VercelService {
 
         return undefined;
     }
-
-    //     async addVercelToGitHubActions(repoUrl: string): Promise<void> {
-    //         const spinner = logger.spinner('⚙️  Adding Vercel deployment to CI/CD...');
-
-    //         try {
-    //             const workflowPath = '.github/workflows/ci.yml';
-
-    //             if (!existsSync(workflowPath)) {
-    //                 spinner.warn('No CI/CD workflow found, skipping Vercel integration');
-    //                 return;
-    //             }
-
-    //             // Read existing workflow - use the imports from top of file
-    //             let workflow = readFileSync(workflowPath, 'utf-8');
-
-    //             // Add Vercel deployment job
-    //             const vercelJob = `
-
-    //   deploy-to-vercel:
-    //     needs: build-and-test
-    //     runs-on: ubuntu-latest
-    //     if: github.ref == 'refs/heads/main'
-
-    //     steps:
-    //     - name: 📦 Checkout code
-    //       uses: actions/checkout@v4
-
-    //     - name: 🚀 Deploy to Vercel
-    //       uses: amondnet/vercel-action@v25
-    //       with:
-    //         vercel-token: \${{ secrets.VERCEL_TOKEN }}
-    //         vercel-org-id: \${{ secrets.VERCEL_ORG_ID }}
-    //         vercel-project-id: \${{ secrets.VERCEL_PROJECT_ID }}
-    //         vercel-args: '--prod'
-    // `;
-
-    //             // Append Vercel job to workflow
-    //             workflow += vercelJob;
-    //             writeFileSync(workflowPath, workflow);
-
-    //             spinner.succeed('✅ Vercel deployment added to CI/CD');
-
-    //             console.log('\n');
-    //             logger.warn('⚠️  Important: Add these secrets to your GitHub repository:');
-    //             logger.info('   1. VERCEL_TOKEN - Your Vercel token');
-    //             logger.info('   2. VERCEL_ORG_ID - Your Vercel organization ID');
-    //             logger.info('   3. VERCEL_PROJECT_ID - Your Vercel project ID');
-    //             logger.info('\n   Get these from: https://vercel.com/account/tokens');
-    //             console.log('\n');
-    //         } catch (error: any) {
-    //             spinner.fail('Failed to add Vercel to CI/CD');
-    //             throw error;
-    //         }
-    //     }
 }

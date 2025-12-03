@@ -24,7 +24,6 @@ export async function forgeCommand(): Promise<void> {
         console.log(chalk.gray('  ━'.repeat(25)));
         console.log('\n');
 
-        // Ask what user wants to do
         const { actions } = await inquirer.prompt([
             {
                 type: 'checkbox',
@@ -49,6 +48,7 @@ export async function forgeCommand(): Promise<void> {
         let githubService: GitHubService | null = null;
         let repoUrl: string = '';
 
+        // GitHub Setup (if selected)
         if (shouldPushToGitHub) {
             githubService = new GitHubService();
             await githubService.authenticate();
@@ -109,10 +109,12 @@ export async function forgeCommand(): Promise<void> {
                 });
 
             } else if (shouldPushToExisting) {
+                // Push to existing repository
                 const gitService = new GitService();
                 const existingRemote = await gitService.getRemoteUrl();
 
                 if (existingRemote) {
+                    // Found existing remote
                     const { useExisting } = await inquirer.prompt([
                         {
                             type: 'confirm',
@@ -129,6 +131,7 @@ export async function forgeCommand(): Promise<void> {
                     }
                 }
 
+                // If no remote found or user declined
                 if (!repoUrl) {
                     const { existingRepoUrl } = await inquirer.prompt([
                         {
@@ -153,6 +156,7 @@ export async function forgeCommand(): Promise<void> {
         const detector = new ProjectDetector();
         const projectConfig = detector.detect();
 
+        // CI/CD Setup (if selected)
         if (shouldAddCICD) {
             if (projectConfig.type !== 'unknown') {
                 const cicdGenerator = new CICDGenerator(projectConfig);
@@ -160,19 +164,6 @@ export async function forgeCommand(): Promise<void> {
             } else {
                 logger.warn('⚠️  Skipping CI/CD: Could not detect project type');
             }
-        }
-
-        let vercelUrl = '';
-        if (shouldDeployToVercel) {
-            const vercelService = new VercelService();
-            await vercelService.authenticate();
-
-            const projectName = repoUrl
-                ? repoUrl.split('/').pop()?.replace('.git', '') || 'my-project'
-                : process.cwd().split('/').pop() || 'my-project';
-
-            const deployment = await vercelService.deploy(projectName, projectConfig, repoUrl);
-            vercelUrl = deployment.url;
         }
 
         if (shouldPushToGitHub && repoUrl) {
@@ -193,19 +184,26 @@ export async function forgeCommand(): Promise<void> {
                 if (!forceReinit) {
                     console.log('\n');
                     logger.success('🎉 Setup complete!');
-                    if (repoUrl) {
-                        console.log(chalk.gray('  📦 GitHub Repository:'));
-                        console.log(chalk.cyan.bold(`     ${repoUrl}\n`));
-                    }
-                    if (vercelUrl) {
-                        console.log(chalk.gray('  🚀 Live Deployment:'));
-                        console.log(chalk.magenta.bold(`     ${vercelUrl}\n`));
-                    }
+                    console.log(chalk.gray('  📦 GitHub Repository:'));
+                    console.log(chalk.cyan.bold(`     ${repoUrl}\n`));
                     return;
                 }
             }
 
             await gitService.initAndPush(repoUrl, isExisting);
+        }
+
+        let vercelUrl = '';
+        if (shouldDeployToVercel) {
+            const vercelService = new VercelService();
+            await vercelService.authenticate();
+
+            const projectName = repoUrl
+                ? repoUrl.split('/').pop()?.replace('.git', '') || 'my-project'
+                : process.cwd().split('/').pop() || 'my-project';
+
+            const deployment = await vercelService.deploy(projectName, projectConfig, repoUrl);
+            vercelUrl = deployment.url;
         }
 
         console.log('\n');
