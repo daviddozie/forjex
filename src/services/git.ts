@@ -1,12 +1,16 @@
 import simpleGit, { SimpleGit } from 'simple-git';
 import { logger } from '../utils/logger.js';
 import { writeFileSync, existsSync } from 'fs';
+import { CommitMessageGenerator } from './commit-generator.js';
+import chalk from 'chalk';
 
 export class GitService {
     private git: SimpleGit;
+    private commitGenerator: CommitMessageGenerator;
 
     constructor(workingDir: string = process.cwd()) {
         this.git = simpleGit(workingDir);
+        this.commitGenerator = new CommitMessageGenerator();
     }
 
     createLocalFiles(options: { readme?: boolean; gitignore?: string; license?: string }): void {
@@ -42,8 +46,16 @@ export class GitService {
                 spinner.text = '📁 Adding files...';
                 await this.git.add('.');
 
-                spinner.text = '💾 Creating commit...';
-                await this.git.commit('Update from Forjex');
+                spinner.stop();
+
+                // Generate AI commit message
+                const commitMessage = await this.commitGenerator.generateCommitMessage();
+
+                console.log(chalk.gray('\n  📝 Commit message: ') + chalk.cyan(`"${commitMessage}"`));
+                console.log('');
+
+                spinner.start('💾 Creating commit...');
+                await this.git.commit(commitMessage);
 
                 spinner.text = '🚀 Pushing to GitHub...';
                 await this.git.push('origin', 'main');
