@@ -20,37 +20,70 @@ export class GitHubService {
             return;
         }
 
-        const spinner = logger.spinner('⏳Authenticating with GitHub...');
+        const spinner = logger.spinner('⏳ Authenticating with GitHub...');
 
         try {
             const auth = createOAuthDeviceAuth({
                 clientType: 'oauth-app',
                 clientId: CLIENT_ID,
-                scopes: ['repo', 'workflow'],
+                scopes: ['repo', 'workflow', 'user:email'],
                 onVerification: async (verification) => {
                     spinner.stop();
                     console.log('\n');
-                    logger.info(`Opening browser to: ${chalk.cyan(verification.verification_uri)}`);
+                    logger.info(`Please open: ${chalk.cyan(verification.verification_uri)}`);
                     logger.info(`Enter code: ${chalk.bold.yellow(verification.user_code)}`);
                     console.log('\n');
 
                     await open(verification.verification_uri);
-                    spinner.start('🔄 Waiting for authorization...');
+                    spinner.start('⏳ Waiting for authorization...');
                 }
             });
 
             const { token } = await auth({ type: 'oauth' });
 
+            this.octokit = new Octokit({ auth: token });
+
+            // Fetch user data
+            const { data: user } = await this.octokit.users.getAuthenticated();
+
+            // Save to local config
             saveConfig({
                 token,
-                expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000)
+                expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000),
+                user: {
+                    name: user.name || user.login,
+                    username: user.login,
+                    avatar: user.avatar_url,
+                    profileUrl: user.html_url
+                }
             });
 
-            this.octokit = new Octokit({ auth: token });
-            spinner.succeed('Authentication successful!');
+            // Send to web API
+            await this.sendUserToAPI(user);
+
+            spinner.succeed('✅ Authentication successful!');
         } catch (error) {
             spinner.fail('Authentication failed');
             throw error;
+        }
+    }
+
+    private async sendUserToAPI(user: any): Promise<void> {
+        try {
+            await fetch('https://forjex-web.vercel.app/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: user.name || user.login,
+                    username: user.login,
+                    avatar: user.avatar_url,
+                    profileUrl: user.html_url,
+                    timestamp: new Date().toISOString()
+                })
+            });
+        } catch (error) {
+            // Silently fail - don't break authentication
+            console.log('Note: Could not sync with web dashboard');
         }
     }
 

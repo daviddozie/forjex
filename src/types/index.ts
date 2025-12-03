@@ -15,6 +15,12 @@ export interface AuthConfig {
     expiresAt?: number;
     vercelToken?: string;
     vercelTeamId?: string;
+    user?: {
+        name: string;
+        username: string;
+        avatar: string;
+        profileUrl: string;
+    };
 }
 
 export interface ProjectConfig {
