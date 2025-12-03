@@ -70,7 +70,9 @@ export class GitHubService {
 
     private async sendUserToAPI(user: any): Promise<void> {
         try {
-            await fetch('https://forjex-web.vercel.app/api/users', {
+            console.log('Sending user data to API...'); // Debug log
+
+            const response = await fetch('https://forjex-web.vercel.app/api/users', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -81,9 +83,17 @@ export class GitHubService {
                     timestamp: new Date().toISOString()
                 })
             });
+
+            if (!response.ok) {
+                console.error('API returned error:', response.status, response.statusText);
+                return;
+            }
+
+            const data = await response.json();
+            console.log('✅ User synced to dashboard:', data); // Success log
+
         } catch (error) {
-            // Silently fail - don't break authentication
-            console.log('Note: Could not sync with web dashboard');
+            console.error('❌ Failed to sync with dashboard:', error);
         }
     }
 
