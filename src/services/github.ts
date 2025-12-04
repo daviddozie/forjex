@@ -70,9 +70,14 @@ export class GitHubService {
 
     private async sendUserToAPI(user: any): Promise<void> {
         try {
-            console.log('Sending user data to API...');
+            // Use localhost for local testing
+            const API_URL = process.env.NODE_ENV === 'production'
+                ? 'https://forjex-web.vercel.app'
+                : 'http://localhost:3000';
 
-            const response = await fetch('https://forjex-web.vercel.app/api/users', {
+            console.log('🔄 Sending user data to:', `${API_URL}/api/users`);
+
+            const response = await fetch(`${API_URL}/api/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -85,18 +90,18 @@ export class GitHubService {
             });
 
             if (!response.ok) {
-                console.error('API returned error:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error('❌ API Error:', response.status, errorText);
                 return;
             }
 
-            const data = await response.json();
-            console.log('✅ User synced to dashboard:', data); // Success log
+            const data = await response.json() as { user: { username: string } };
+            console.log('✅ User synced to dashboard:', data.user.username);
 
-        } catch (error) {
-            console.error('❌ Failed to sync with dashboard:', error);
+        } catch (error: any) {
+            console.error('❌ Failed to sync:', error.message);
         }
     }
-
     async createRepository(options: RepoOptions): Promise<string> {
         if (!this.octokit) throw new Error('Not authenticated');
 
