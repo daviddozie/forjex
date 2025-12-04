@@ -1,6 +1,6 @@
 {
   "name": "forjex",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "type": "module",
   "description": "Automate GitHub repo creation and Vercel deployment",
   "main": "./dist/index.js",

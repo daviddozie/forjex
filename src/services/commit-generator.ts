@@ -14,7 +14,6 @@ export class CommitMessageGenerator {
         const spinner = logger.spinner('🤖 Analyzing code changes...');
 
         try {
-            // Get detailed git diff
             const diff = execSync('git diff --cached', { encoding: 'utf-8' });
 
             if (!diff.trim()) {
@@ -45,11 +44,9 @@ export class CommitMessageGenerator {
             return 'chore: update code';
         }
 
-        // Get the most significant change
         const primaryChange = fileChanges[0];
         const fileName = primaryChange.file.split('/').pop() || primaryChange.file;
 
-        // Build specific description
         const type = this.detectCommitType(primaryChange);
         const description = this.buildSpecificDescription(primaryChange, fileName);
 
@@ -66,7 +63,6 @@ export class CommitMessageGenerator {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
 
-            // Detect file header
             const fileMatch = line.match(/^\+\+\+ b\/(.+)$/);
             if (fileMatch) {
                 if (currentFile && currentChange.file) {
@@ -79,14 +75,11 @@ export class CommitMessageGenerator {
 
             if (!currentFile) continue;
 
-            // Analyze added lines
             if (line.startsWith('+') && !line.startsWith('+++')) {
                 const content = line.substring(1).trim();
 
-                // Skip empty lines
                 if (!content) continue;
 
-                // Detect what was added
                 if (content.includes('<button') || content.includes('Button')) {
                     currentChange.added.push('button');
                 } else if (content.includes('<input') || content.includes('Input')) {
@@ -111,7 +104,6 @@ export class CommitMessageGenerator {
                     const hookMatch = content.match(/use\w+/);
                     currentChange.added.push(`${hookMatch?.[0]} hook`);
                 } else if (content.length > 10 && !content.startsWith('//') && !content.startsWith('/*')) {
-                    // Generic text content
                     const preview = content.substring(0, 30).replace(/[^\w\s]/g, '').trim();
                     if (preview) {
                         currentChange.added.push('content');
@@ -119,7 +111,6 @@ export class CommitMessageGenerator {
                 }
             }
 
-            // Analyze removed lines
             if (line.startsWith('-') && !line.startsWith('---')) {
                 const content = line.substring(1).trim();
 
@@ -137,7 +128,6 @@ export class CommitMessageGenerator {
             }
         }
 
-        // Add last file
         if (currentFile && currentChange.file) {
             fileChanges.push(currentChange);
         }
@@ -189,11 +179,8 @@ export class CommitMessageGenerator {
 
     private buildSpecificDescription(change: FileChange, fileName: string): string {
         const { added, removed } = change;
-
-        // Prioritize most specific changes
         const parts: string[] = [];
 
-        // Handle additions
         if (added.length > 0) {
             const uniqueAdded = [...new Set(added)];
 
@@ -202,13 +189,11 @@ export class CommitMessageGenerator {
             } else if (uniqueAdded.length === 2) {
                 parts.push(`add ${uniqueAdded[0]} and ${uniqueAdded[1]} to ${fileName}`);
             } else {
-                // Group similar items
                 const items = uniqueAdded.slice(0, 2).join(', ');
                 parts.push(`add ${items} to ${fileName}`);
             }
         }
 
-        // Handle removals
         if (removed.length > 0) {
             const uniqueRemoved = [...new Set(removed)];
 
@@ -227,7 +212,6 @@ export class CommitMessageGenerator {
             }
         }
 
-        // Handle modifications (when both added and removed)
         if (added.length > 0 && removed.length > 0 && parts.length === 0) {
             parts.push(`update ${fileName}`);
         }

@@ -70,7 +70,7 @@ export class GitHubService {
 
     private async sendUserToAPI(user: any): Promise<void> {
         try {
-            console.log('Sending user data to API...'); // Debug log
+            console.log('Sending user data to API...');
 
             const response = await fetch('https://forjex-web.vercel.app/api/users', {
                 method: 'POST',
