@@ -38,6 +38,31 @@ export async function forgeCommand(): Promise<void> {
             }
         ]);
        
+         console.log('\n');
+
+        const yellowFooter = chalk.yellow.bold(
+            "\n   ↑↓ NAVIGATE\n" +
+            "   SPACE = SELECT\n" +
+            "   A = SELECT ALL\n" +
+            "   I = INVERT\n" +
+            "   ENTER = SUBMIT\n"
+        );
+
+        const originalRender = (inquirer as any).ui?.Prompt?.prototype?.render;
+
+        (inquirer as any).ui.Prompt.prototype.render = function (this: any, ...args: any[]) {
+            if (typeof originalRender === 'function') {
+                originalRender.apply(this, args);
+            }
+
+            // Move to next line and print custom footer (guarded for safety)
+            if (this && this.screen && typeof this.screen.render === 'function') {
+                this.screen.render(
+                    chalk.yellow.bold(this.opt?.message || ''),
+                    yellowFooter
+                );
+            }
+        };
 
         const shouldCreateNewRepo = actions.includes('github-new');
         const shouldPushToExisting = actions.includes('github-existing');
