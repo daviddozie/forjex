@@ -24,6 +24,8 @@ export async function forgeCommand(): Promise<void> {
         console.log(chalk.gray('  ━'.repeat(25)));
         console.log('\n');
 
+        console.log(chalk.yellow('  Use ↑↓ arrow keys or number(1|2) to navigate, press ENTER to select\n'));
+
         const { repoChoice } = await inquirer.prompt([
             {
                 type: 'rawlist',
