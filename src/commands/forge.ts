@@ -28,19 +28,16 @@ export async function forgeCommand(): Promise<void> {
             {
                 type: 'checkbox',
                 name: 'actions',
-                message: chalk.yellow.bold('What would you like forjex to do for you?'),
-                prefix: chalk.yellow('👉'),
-                pageSize: 20,
+                message: 'What would you like forjex to do for you?',
                 choices: [
-                    { name: chalk.yellow.bold('✨ Create a new GitHub repository'), value: 'github-new', checked: true },
-                    { name: chalk.yellow.bold('🔗 Push to an existing GitHub repository'), value: 'github-existing' },
-                    { name: chalk.yellow.bold('⚙️  Add CI/CD pipeline (GitHub Actions)'), value: 'cicd' },
-                    { name: chalk.yellow.bold('🚀 Deploy to Vercel'), value: 'vercel' }
-                ],
-                validate: (choices) => choices.length > 0 || chalk.red('Please select at least one action')
+                    { name: '✨ Create a new GitHub repository', value: 'github-new', checked: true },
+                    { name: '🔗 Push to an existing GitHub repository', value: 'github-existing' },
+                    { name: '⚙️ Add CI/CD pipeline (GitHub Actions)', value: 'cicd' },
+                    { name: '🚀 Deploy to Vercel', value: 'vercel' }],
+                validate: (choices) => choices.length > 0 || 'Please select at least one action'
             }
         ]);
-
+       
 
         const shouldCreateNewRepo = actions.includes('github-new');
         const shouldPushToExisting = actions.includes('github-existing');
