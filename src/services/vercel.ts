@@ -53,11 +53,11 @@ export class VercelService {
         if (!this.isAuthenticated) {
             throw new Error('Not authenticated with Vercel');
         }
-
+        const sanitizedName = this.sanitizeProjectName(projectName);
         const spinner = logger.spinner('🚀 Deploying to Vercel...');
 
         try {
-            this.createVercelConfig(projectName, projectConfig);
+            this.createVercelConfig(sanitizedName, projectConfig);
 
             spinner.text = '📦 Building and deploying...';
 
@@ -80,12 +80,21 @@ export class VercelService {
             return {
                 url: deploymentUrl,
                 deploymentUrl: deploymentUrl,
-                projectId: projectName
+                projectId: sanitizedName
             };
         } catch (error: any) {
             spinner.fail('Deployment to Vercel failed');
             throw error;
         }
+    }
+
+    private sanitizeProjectName(name: string): string {
+        return name
+            .toLowerCase()
+            .replace(/[^a-z0-9._-]/g, '-')
+            .replace(/--+/g, '-')
+            .replace(/^[-._]+|[-._]+$/g, '')
+            .substring(0, 100);
     }
 
     private createVercelConfig(projectName: string, projectConfig: ProjectConfig): void {

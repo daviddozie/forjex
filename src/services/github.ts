@@ -70,10 +70,8 @@ export class GitHubService {
 
     private async sendUserToAPI(user: any): Promise<void> {
         try {
-            // Use localhost for local testing
-            const API_URL = process.env.NODE_ENV === 'production'
-                ? 'https://forjex-web.vercel.app'
-                : 'http://localhost:3000';
+            
+            const API_URL = 'https://forjex-web.vercel.app';
 
             console.log('🔄 Sending user data to:', `${API_URL}/api/users`);
 
