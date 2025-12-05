@@ -30,8 +30,8 @@ export async function forgeCommand(): Promise<void> {
                 name: 'repoChoice',
                 message: 'What would you like to do with GitHub?',
                 choices: [
-                    { name: '✨ Create a new GitHub repository', value: 'create-new' },
-                    { name: '🔗 Push to an existing GitHub repository', value: 'push-existing' }
+                    '✨ Create a new GitHub repository',
+                    '🔗 Push to an existing GitHub repository'
                 ]
             }
         ]);
