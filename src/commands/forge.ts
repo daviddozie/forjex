@@ -24,15 +24,13 @@ export async function forgeCommand(): Promise<void> {
         console.log(chalk.gray('  ━'.repeat(25)));
         console.log('\n');
 
-        // Show instructions
         console.log(chalk.yellow('  Use ↑↓ arrow keys to navigate, press ENTER to select\n'));
 
-        // STEP 1: Ask about GitHub repository (list, not checkbox - user picks ONE)
         const { repoChoice } = await inquirer.prompt([
             {
                 type: 'rawlist',
                 name: 'repoChoice',
-                message: 'What would you like to do with GitHub?',
+                message: 'What would you like to do with Forjex?',
                 choices: [
                     {
                         name: '✨ Create a new GitHub repository',
@@ -52,7 +50,6 @@ export async function forgeCommand(): Promise<void> {
 
         console.log('\n');
 
-        // STEP 2: Ask about CI/CD
         const { addCICD } = await inquirer.prompt([
             {
                 type: 'confirm',
@@ -64,7 +61,6 @@ export async function forgeCommand(): Promise<void> {
 
         console.log('\n');
 
-        // STEP 3: Ask about Vercel
         const { deployVercel } = await inquirer.prompt([
             {
                 type: 'confirm',
