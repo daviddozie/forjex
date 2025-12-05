@@ -26,13 +26,14 @@ export async function forgeCommand(): Promise<void> {
 
         const { repoChoice } = await inquirer.prompt([
             {
-                type: 'list',
+                type: 'checkbox',
                 name: 'repoChoice',
-                message: 'What would you like to do with GitHub?',
+                message: 'What would you like to do with forjex?',
                 choices: [
-                    '✨ Create a new GitHub repository',
-                    '🔗 Push to an existing GitHub repository'
-                ]
+                    { name: '✨ Create a new GitHub repository', value: 'github-new', checked: true },
+                    { name: '🔗 Push to an existing GitHub repository', value: 'github-existing' },
+                ],
+                validate: (choices) => choices.length > 0 || 'Please select at least one action'
             }
         ]);
 
