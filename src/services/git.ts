@@ -42,7 +42,32 @@ export class GitService {
 
         try {
             if (isExistingRepo) {
-                // For existing repos, just add, commit, and push
+                const isRepo = await this.isGitRepository();
+
+                if (!isRepo) {
+                    spinner.text = '🔧 Initializing git...';
+                    await this.git.init();
+
+                    try {
+                        await this.git.checkoutLocalBranch('main');
+                    } catch {
+                        await this.git.checkout('main');
+                    }
+                }
+
+                spinner.text = '🔗 Setting up remote...';
+                const remotes = await this.git.getRemotes(true);
+                const hasOrigin = remotes.some(r => r.name === 'origin');
+
+                if (hasOrigin) {
+                    await this.git.removeRemote('origin');
+                    await this.git.addRemote('origin', repoUrl);
+                    logger.info('Updated remote origin');
+                } else {
+                    await this.git.addRemote('origin', repoUrl);
+                    logger.info('Added remote origin');
+                }
+
                 spinner.text = '📁 Adding files...';
                 await this.git.add('.');
 
@@ -57,7 +82,18 @@ export class GitService {
                 await this.git.commit(commitMessage);
 
                 spinner.text = '🚀 Pushing to GitHub...';
-                await this.git.push('origin', 'main');
+
+                try {
+                    spinner.text = '⬇️  Pulling remote changes...';
+                    await this.git.pull('origin', 'main', ['--rebase', '--allow-unrelated-histories']);
+                } catch (pullError: any) {
+                    if (!pullError.message.includes('couldn\'t find remote ref')) {
+                        console.log(chalk.yellow('\n  ⚠️  Could not pull: ' + pullError.message));
+                    }
+                }
+
+                spinner.text = '🚀 Pushing to GitHub...';
+                await this.git.push('origin', 'main', ['--set-upstream']);
 
             } else {
                 await this.git.init();

@@ -36,7 +36,6 @@ export class VercelService {
 
             execSync('vercel login', { stdio: 'inherit' });
 
-            // Save a placeholder token (Vercel CLI handles auth internally)
             const currentConfig = loadConfig() || {};
             saveConfig({
                 ...currentConfig,
@@ -72,8 +71,25 @@ export class VercelService {
             const urlMatch = deployOutput.match(/https:\/\/[^\s]+/);
             const deploymentUrl = urlMatch ? urlMatch[0] : '';
 
+            spinner.text = '🔍 Getting project URL...';
+            let productionUrl = deploymentUrl;
+
+            try {
+                const inspectOutput = execSync(`vercel inspect ${deploymentUrl} --yes`, {
+                    encoding: 'utf-8',
+                    stdio: 'pipe'
+                });
+
+                const prodUrlMatch = inspectOutput.match(/url:\s+(https:\/\/[^\s]+\.vercel\.app)/i);
+                if (prodUrlMatch) {
+                    productionUrl = prodUrlMatch[1];
+                }
+            } catch (inspectError) {
+                productionUrl = `https://${sanitizedName}.vercel.app`;
+            }
+
             spinner.succeed(`✅ Deployed to Vercel`);
-            console.log(chalk.magenta.bold(`   ${deploymentUrl}\n`));
+            console.log(chalk.magenta.bold(`   ${productionUrl}\n`));
 
             if (githubRepoUrl) {
                 logger.success('🔗 Auto-deployment enabled!');
@@ -81,7 +97,7 @@ export class VercelService {
             }
 
             return {
-                url: deploymentUrl,
+                url: productionUrl,
                 deploymentUrl: deploymentUrl,
                 projectId: sanitizedName
             };
@@ -131,6 +147,24 @@ export class VercelService {
             const urlMatch = deployOutput.match(/https:\/\/[^\s]+/);
             const deploymentUrl = urlMatch ? urlMatch[0] : '';
 
+            spinner.text = '🔍 Getting project URL...';
+            let productionUrl = deploymentUrl;
+
+            try {
+                const inspectOutput = execSync(`vercel inspect ${deploymentUrl} --yes`, {
+                    encoding: 'utf-8',
+                    stdio: 'pipe'
+                });
+
+                const prodUrlMatch = inspectOutput.match(/url:\s+(https:\/\/[^\s]+\.vercel\.app)/i);
+                if (prodUrlMatch) {
+                    productionUrl = prodUrlMatch[1];
+                }
+            } catch (inspectError) {
+                
+                productionUrl = `https://${sanitizedName}.vercel.app`;
+            }
+
             try {
                 spinner.text = '🔗 Setting up auto-deployment...';
                 execSync(`vercel git connect`, {
@@ -145,13 +179,13 @@ export class VercelService {
             }
 
             spinner.succeed(`✅ Deployed to Vercel with GitHub integration`);
-            console.log(chalk.magenta.bold(`   ${deploymentUrl}\n`));
+            console.log(chalk.magenta.bold(`   ${productionUrl}\n`));
 
             logger.success('🔗 Auto-deployment configured!');
             logger.info('   Future pushes to main will automatically deploy\n');
 
             return {
-                url: deploymentUrl,
+                url: productionUrl,
                 deploymentUrl: deploymentUrl,
                 projectId: sanitizedName
             };
@@ -162,12 +196,24 @@ export class VercelService {
     }
 
     private sanitizeProjectName(name: string): string {
-        return name
+        let sanitized = name
             .toLowerCase()
             .replace(/[^a-z0-9._-]/g, '-')
-            .replace(/--+/g, '-')
-            .replace(/^[-._]+|[-._]+$/g, '')
-            .substring(0, 100);
+            .replace(/--+/g, '-')         
+            .replace(/---+/g, '-')        
+            .replace(/^[-._]+|[-._]+$/g, '') 
+            .replace(/^[-]+|[-]+$/g, '')     
+            .substring(0, 100)              
+            || 'my-project';               
+
+        
+        if (/\d/.test(sanitized)) {
+            sanitized = sanitized.replace(/\d+/g, '-')
+                .replace(/--+/g, '-')
+                .replace(/^[-._]+|[-._]+$/g, '');
+        }
+
+        return sanitized;
     }
 
     private createVercelConfig(projectName: string, projectConfig: ProjectConfig): void {
@@ -214,7 +260,6 @@ export class VercelService {
                 return 'svelte-kit';
             }
 
-            // Check package.json for framework hints
             if (existsSync('package.json')) {
                 const packageJson = require(process.cwd() + '/package.json');
                 const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
