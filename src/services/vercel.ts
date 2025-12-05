@@ -8,6 +8,10 @@ import chalk from 'chalk';
 export class VercelService {
     private isAuthenticated: boolean = false;
 
+    createVercelConfigOnly(projectName: string, projectConfig: ProjectConfig): void {
+        this.createVercelConfig(projectName, projectConfig);
+    }
+
     async authenticate(): Promise<void> {
         const config = loadConfig();
 
@@ -88,9 +92,9 @@ export class VercelService {
     }
 
     async deployWithGitHub(
-        projectName: string, 
-        projectConfig: ProjectConfig, 
-        repoOwner: string, 
+        projectName: string,
+        projectConfig: ProjectConfig,
+        repoOwner: string,
         repoName: string
     ): Promise<VercelDeployment> {
         if (!this.isAuthenticated) {
@@ -106,7 +110,7 @@ export class VercelService {
             spinner.text = '🔗 Linking GitHub repository...';
 
             const linkCommand = `vercel link --yes --repo https://github.com/${repoOwner}/${repoName}`;
-            
+
             try {
                 execSync(linkCommand, {
                     encoding: 'utf-8',

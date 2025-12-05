@@ -48,7 +48,6 @@ export class GitService {
 
                 spinner.stop();
 
-                // Generate AI commit message
                 const commitMessage = await this.commitGenerator.generateCommitMessage();
 
                 console.log(chalk.gray('\n  📝 Commit message: ') + chalk.cyan(`"${commitMessage}"`));

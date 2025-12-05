@@ -24,20 +24,19 @@ export async function forgeCommand(): Promise<void> {
         console.log(chalk.gray('  ━'.repeat(25)));
         console.log('\n');
 
-        // STEP 1: Ask about GitHub repository
         const { repoChoice } = await inquirer.prompt([
             {
                 type: 'rawlist',
                 name: 'repoChoice',
                 message: 'What would you like to do with Forjex?',
                 choices: [
-                    { 
-                        name: 'Create a new GitHub repository', 
+                    {
+                        name: 'Create a new GitHub repository',
                         value: 'github-new',
                         short: 'Create new repo'
                     },
-                    { 
-                        name: 'Push to an existing GitHub repository', 
+                    {
+                        name: 'Push to an existing GitHub repository',
                         value: 'github-existing',
                         short: 'Push to existing'
                     }
@@ -47,7 +46,6 @@ export async function forgeCommand(): Promise<void> {
 
         console.log('\n');
 
-        // STEP 2: Ask about CI/CD
         const { addCICD } = await inquirer.prompt([
             {
                 type: 'confirm',
@@ -59,7 +57,6 @@ export async function forgeCommand(): Promise<void> {
 
         console.log('\n');
 
-        // STEP 3: Ask about Vercel
         const { deployVercel } = await inquirer.prompt([
             {
                 type: 'confirm',
@@ -75,21 +72,18 @@ export async function forgeCommand(): Promise<void> {
         console.log(chalk.cyan('━'.repeat(50)));
         console.log('\n');
 
-        // Variables to track repo info
         let repoUrl: string = '';
         let repoOwner: string = '';
         let repoName: string = '';
 
-        // Authenticate with GitHub
         const githubService = new GitHubService();
         await githubService.authenticate();
 
         console.log('\n');
 
-        // PROCESS 1: Handle GitHub repository creation/selection
         if (repoChoice === 'github-new') {
             console.log(chalk.blue.bold('  STEP 1: Creating GitHub Repository\n'));
-            
+
             const gitService = new GitService();
 
             const answers = await inquirer.prompt<RepoOptions>([
@@ -153,7 +147,7 @@ export async function forgeCommand(): Promise<void> {
 
         } else if (repoChoice === 'github-existing') {
             console.log(chalk.blue.bold('  STEP 1: Connecting to Existing Repository\n'));
-            
+
             const gitService = new GitService();
             const existingRemote = await gitService.getRemoteUrl();
 
@@ -200,15 +194,13 @@ export async function forgeCommand(): Promise<void> {
             }
         }
 
-        // PROCESS 2: Detect project type
         const detector = new ProjectDetector();
         const projectConfig = detector.detect();
         console.log('\n');
 
-        // PROCESS 3: Add CI/CD pipeline if requested
         if (addCICD) {
             console.log(chalk.blue.bold('  STEP 2: Setting up CI/CD Pipeline\n'));
-            
+
             if (projectConfig.type !== 'unknown') {
                 const cicdGenerator = new CICDGenerator(projectConfig);
                 cicdGenerator.generate();
@@ -218,10 +210,25 @@ export async function forgeCommand(): Promise<void> {
             console.log('\n');
         }
 
-        // PROCESS 4: Push to GitHub
+        if (deployVercel) {
+            console.log(chalk.blue.bold('  STEP 3: Preparing Vercel Configuration\n'));
+
+            const vercelService = new VercelService();
+            const projectName = repoName ||
+                (repoUrl ? repoUrl.split('/').pop()?.replace('.git', '') : undefined) ||
+                process.cwd().split('/').pop() ||
+                'my-project';
+
+            // Create vercel.json BEFORE pushing to GitHub
+            vercelService.createVercelConfigOnly(projectName, projectConfig);
+            logger.success('✅ Vercel configuration created');
+            console.log('\n');
+        }
+
+
         if (repoUrl) {
-            console.log(chalk.blue.bold('  STEP 3: Pushing Code to GitHub\n'));
-            
+            console.log(chalk.blue.bold('  STEP 4: Pushing Code to GitHub\n'));
+
             const gitService = new GitService();
             const isRepo = await gitService.isGitRepository();
             const isExisting = repoChoice === 'github-existing';
@@ -236,7 +243,7 @@ export async function forgeCommand(): Promise<void> {
                         default: true
                     }
                 ]);
-                
+
                 if (!forceReinit) {
                     console.log('\n');
                     logger.success('🎉 Setup complete!');
@@ -250,11 +257,11 @@ export async function forgeCommand(): Promise<void> {
             console.log('\n');
         }
 
-        // PROCESS 5: Deploy to Vercel if requested
         let vercelUrl = '';
+
         if (deployVercel) {
-            console.log(chalk.blue.bold('  STEP 4: Deploying to Vercel\n'));
-            
+            console.log(chalk.blue.bold('  STEP 5: Deploying to Vercel\n'));
+
             const vercelService = new VercelService();
             await vercelService.authenticate();
 
@@ -263,7 +270,7 @@ export async function forgeCommand(): Promise<void> {
                 process.cwd().split('/').pop() ||
                 'my-project';
 
-            // Deploy with GitHub integration
+            // Deploy (vercel.json already created)
             if (repoUrl && repoOwner && repoName) {
                 const deployment = await vercelService.deployWithGitHub(
                     projectName,
