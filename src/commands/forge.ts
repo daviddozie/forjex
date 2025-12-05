@@ -30,22 +30,22 @@ export async function forgeCommand(): Promise<void> {
         // STEP 1: Ask about GitHub repository (list, not checkbox - user picks ONE)
         const { repoChoice } = await inquirer.prompt([
             {
-                type: 'list',
+                type: 'rawlist',
                 name: 'repoChoice',
                 message: 'What would you like to do with GitHub?',
                 choices: [
                     {
                         name: '✨ Create a new GitHub repository',
-                        value: 'github-new',
+                        value: 'new github repo',
                         short: 'Create new repo'
                     },
                     {
                         name: '🔗 Push to an existing GitHub repository',
                         value: 'github-existing',
-                        short: 'Push to existing'
+                        short: 'Push to existing repo'
                     }
                 ],
-                default: 'github-new',
+                default: 'new github repo',
                 loop: false
             }
         ]);
