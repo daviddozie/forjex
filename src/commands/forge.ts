@@ -24,32 +24,30 @@ export async function forgeCommand(): Promise<void> {
         console.log(chalk.gray('  ━'.repeat(25)));
         console.log('\n');
 
-        console.log(chalk.yellow('  Use ↑↓ arrow keys to navigate, press ENTER to select\n'));
-
+        // STEP 1: Ask about GitHub repository
         const { repoChoice } = await inquirer.prompt([
             {
                 type: 'rawlist',
                 name: 'repoChoice',
                 message: 'What would you like to do with Forjex?',
                 choices: [
-                    {
-                        name: '✨ Create a new GitHub repository',
-                        value: 'new github repo',
+                    { 
+                        name: 'Create a new GitHub repository', 
+                        value: 'github-new',
                         short: 'Create new repo'
                     },
-                    {
-                        name: '🔗 Push to an existing GitHub repository',
+                    { 
+                        name: 'Push to an existing GitHub repository', 
                         value: 'github-existing',
-                        short: 'Push to existing repo'
+                        short: 'Push to existing'
                     }
-                ],
-                default: 'new github repo',
-                loop: false
+                ]
             }
         ]);
 
         console.log('\n');
 
+        // STEP 2: Ask about CI/CD
         const { addCICD } = await inquirer.prompt([
             {
                 type: 'confirm',
@@ -61,6 +59,7 @@ export async function forgeCommand(): Promise<void> {
 
         console.log('\n');
 
+        // STEP 3: Ask about Vercel
         const { deployVercel } = await inquirer.prompt([
             {
                 type: 'confirm',
@@ -76,22 +75,21 @@ export async function forgeCommand(): Promise<void> {
         console.log(chalk.cyan('━'.repeat(50)));
         console.log('\n');
 
-        // Now start the processes
-        let githubService: GitHubService | null = null;
+        // Variables to track repo info
         let repoUrl: string = '';
         let repoOwner: string = '';
         let repoName: string = '';
 
         // Authenticate with GitHub
-        githubService = new GitHubService();
+        const githubService = new GitHubService();
         await githubService.authenticate();
 
         console.log('\n');
 
-        // Handle repository creation/selection
+        // PROCESS 1: Handle GitHub repository creation/selection
         if (repoChoice === 'github-new') {
-            console.log(chalk.blue('  📝 Creating a new repository...\n'));
-
+            console.log(chalk.blue.bold('  STEP 1: Creating GitHub Repository\n'));
+            
             const gitService = new GitService();
 
             const answers = await inquirer.prompt<RepoOptions>([
@@ -119,38 +117,43 @@ export async function forgeCommand(): Promise<void> {
                     default: true
                 },
                 {
-                    type: 'list',
+                    type: 'rawlist',
                     name: 'gitignore',
-                    message: 'Add .gitignore template (optional):',
+                    message: 'Add .gitignore template:',
                     choices: ['None', 'Node', 'Python', 'Java', 'Go', 'Rust'],
-                    filter: (val) => val === 'None' ? undefined : val
+                    filter: (val: any) => val === 'None' ? undefined : val
                 },
                 {
-                    type: 'list',
+                    type: 'rawlist',
                     name: 'license',
                     message: 'Choose a license:',
                     choices: ['None', 'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD-3-Clause'],
-                    filter: (val) => val === 'None' ? undefined : val
+                    filter: (val: any) => val === 'None' ? undefined : val
                 }
             ]);
 
             console.log('\n');
 
+            // Create the repository
             repoUrl = await githubService.createRepository(answers);
             repoName = answers.name;
 
+            // Get owner info
             const userInfo = await githubService.getUserInfo();
             repoOwner = userInfo.login;
 
+            // Create local files
             gitService.createLocalFiles({
                 readme: answers.addReadme,
                 gitignore: answers.gitignore,
                 license: answers.license
             });
 
-        } else if (repoChoice === 'github-existing') {
-            console.log(chalk.blue('  🔗 Connecting to existing repository...\n'));
+            console.log('\n');
 
+        } else if (repoChoice === 'github-existing') {
+            console.log(chalk.blue.bold('  STEP 1: Connecting to Existing Repository\n'));
+            
             const gitService = new GitService();
             const existingRemote = await gitService.getRemoteUrl();
 
@@ -197,25 +200,31 @@ export async function forgeCommand(): Promise<void> {
             }
         }
 
-        // Detect project type
+        // PROCESS 2: Detect project type
         const detector = new ProjectDetector();
         const projectConfig = detector.detect();
+        console.log('\n');
 
-        // Add CI/CD if requested
+        // PROCESS 3: Add CI/CD pipeline if requested
         if (addCICD) {
+            console.log(chalk.blue.bold('  STEP 2: Setting up CI/CD Pipeline\n'));
+            
             if (projectConfig.type !== 'unknown') {
                 const cicdGenerator = new CICDGenerator(projectConfig);
                 cicdGenerator.generate();
             } else {
                 logger.warn('⚠️  Skipping CI/CD: Could not detect project type');
             }
+            console.log('\n');
         }
 
-        // Push to GitHub
+        // PROCESS 4: Push to GitHub
         if (repoUrl) {
+            console.log(chalk.blue.bold('  STEP 3: Pushing Code to GitHub\n'));
+            
             const gitService = new GitService();
             const isRepo = await gitService.isGitRepository();
-            const isExisting = repoChoice === 'github-existing' || (isRepo && repoChoice !== 'github-new');
+            const isExisting = repoChoice === 'github-existing';
 
             if (isRepo && !isExisting) {
                 logger.warn('Directory is already a git repository');
@@ -227,6 +236,7 @@ export async function forgeCommand(): Promise<void> {
                         default: true
                     }
                 ]);
+                
                 if (!forceReinit) {
                     console.log('\n');
                     logger.success('🎉 Setup complete!');
@@ -237,11 +247,14 @@ export async function forgeCommand(): Promise<void> {
             }
 
             await gitService.initAndPush(repoUrl, isExisting);
+            console.log('\n');
         }
 
-        // Deploy to Vercel if requested
+        // PROCESS 5: Deploy to Vercel if requested
         let vercelUrl = '';
         if (deployVercel) {
+            console.log(chalk.blue.bold('  STEP 4: Deploying to Vercel\n'));
+            
             const vercelService = new VercelService();
             await vercelService.authenticate();
 
@@ -263,10 +276,10 @@ export async function forgeCommand(): Promise<void> {
                 const deployment = await vercelService.deploy(projectName, projectConfig);
                 vercelUrl = deployment.url;
             }
+            console.log('\n');
         }
 
         // Final success message
-        console.log('\n');
         console.log(chalk.cyan('━'.repeat(50)));
         logger.success('🎉 All done! Your project is ready.');
         console.log(chalk.cyan('━'.repeat(50)));
@@ -289,6 +302,7 @@ export async function forgeCommand(): Promise<void> {
 
     } catch (error: any) {
         logger.error(error.message || 'An error occurred');
+        console.error(error);
         process.exit(1);
     }
 }
