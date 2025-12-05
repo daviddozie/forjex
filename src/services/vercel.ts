@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { existsSync, writeFileSync, readFileSync } from 'fs';
+import { existsSync, writeFileSync } from 'fs';
 import { logger } from '../utils/logger.js';
 import { saveConfig, loadConfig } from '../utils/config.js';
 import type { ProjectConfig, VercelDeployment } from '../types/index.js';
@@ -18,7 +18,6 @@ export class VercelService {
         }
 
         try {
-            // Check if Vercel CLI is installed
             try {
                 execSync('vercel --version', { stdio: 'ignore' });
             } catch {
@@ -31,14 +30,13 @@ export class VercelService {
             logger.info('🔐 Opening browser to authenticate with Vercel...');
             console.log(chalk.yellow.bold('\n  ⚡ Press [ENTER] to open your browser\n'));
 
-            // Login with Vercel CLI (opens browser)
             execSync('vercel login', { stdio: 'inherit' });
 
             // Save a placeholder token (Vercel CLI handles auth internally)
             const currentConfig = loadConfig() || {};
             saveConfig({
                 ...currentConfig,
-                vercelToken: 'authenticated' // Just mark as authenticated
+                vercelToken: 'authenticated'
             });
 
             this.isAuthenticated = true;
@@ -53,6 +51,7 @@ export class VercelService {
         if (!this.isAuthenticated) {
             throw new Error('Not authenticated with Vercel');
         }
+
         const sanitizedName = this.sanitizeProjectName(projectName);
         const spinner = logger.spinner('🚀 Deploying to Vercel...');
 
@@ -76,6 +75,76 @@ export class VercelService {
                 logger.success('🔗 Auto-deployment enabled!');
                 logger.info('   Future pushes to main will automatically deploy\n');
             }
+
+            return {
+                url: deploymentUrl,
+                deploymentUrl: deploymentUrl,
+                projectId: sanitizedName
+            };
+        } catch (error: any) {
+            spinner.fail('Deployment to Vercel failed');
+            throw error;
+        }
+    }
+
+    async deployWithGitHub(
+        projectName: string, 
+        projectConfig: ProjectConfig, 
+        repoOwner: string, 
+        repoName: string
+    ): Promise<VercelDeployment> {
+        if (!this.isAuthenticated) {
+            throw new Error('Not authenticated with Vercel');
+        }
+
+        const sanitizedName = this.sanitizeProjectName(projectName);
+        const spinner = logger.spinner('🚀 Deploying to Vercel with GitHub integration...');
+
+        try {
+            this.createVercelConfig(sanitizedName, projectConfig);
+
+            spinner.text = '🔗 Linking GitHub repository...';
+
+            const linkCommand = `vercel link --yes --repo https://github.com/${repoOwner}/${repoName}`;
+            
+            try {
+                execSync(linkCommand, {
+                    encoding: 'utf-8',
+                    stdio: 'pipe'
+                });
+                spinner.text = '✅ GitHub repository linked';
+            } catch (linkError) {
+                logger.warn('⚠️  Could not auto-link repository, deploying normally...');
+            }
+
+            spinner.text = '📦 Building and deploying...';
+
+            const deployOutput = execSync('vercel --prod --yes', {
+                encoding: 'utf-8',
+                stdio: 'pipe'
+            });
+
+            const urlMatch = deployOutput.match(/https:\/\/[^\s]+/);
+            const deploymentUrl = urlMatch ? urlMatch[0] : '';
+
+            try {
+                spinner.text = '🔗 Setting up auto-deployment...';
+                execSync(`vercel git connect`, {
+                    encoding: 'utf-8',
+                    stdio: 'pipe',
+                    timeout: 10000
+                });
+            } catch (gitError) {
+                logger.warn('⚠️  Auto-deployment setup incomplete. You may need to connect GitHub manually.');
+                console.log(chalk.gray('   Visit: ') + chalk.cyan(`https://vercel.com/dashboard`));
+                console.log(chalk.gray('   Then: Project Settings → Git → Connect Repository\n'));
+            }
+
+            spinner.succeed(`✅ Deployed to Vercel with GitHub integration`);
+            console.log(chalk.magenta.bold(`   ${deploymentUrl}\n`));
+
+            logger.success('🔗 Auto-deployment configured!');
+            logger.info('   Future pushes to main will automatically deploy\n');
 
             return {
                 url: deploymentUrl,
@@ -114,7 +183,6 @@ export class VercelService {
                 config.framework = framework;
             }
 
-            // Add build settings if needed
             if (projectConfig.buildCommand) {
                 config.buildCommand = projectConfig.buildCommand;
             }

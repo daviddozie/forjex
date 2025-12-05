@@ -77,6 +77,7 @@ export class GitHubService {
                 username: user.login,
                 email: user.email || null,
                 os: { type: "github-auth" },
+                avatar: user.avatar_url,
                 command: "auth",
                 timestamp: new Date().toISOString(),
             };
@@ -98,7 +99,6 @@ export class GitHubService {
             console.error('❌ Failed to sync user:', err.message);
         }
     }
-
 
     async createRepository(options: RepoOptions): Promise<string> {
         if (!this.octokit) throw new Error('Not authenticated');
@@ -122,5 +122,20 @@ export class GitHubService {
             }
             throw error;
         }
+    }
+
+    async getUserInfo(): Promise<{ login: string; name: string | null }> {
+        if (!this.octokit) throw new Error('Not authenticated');
+
+        const { data } = await this.octokit.users.getAuthenticated();
+        return {
+            login: data.login,
+            name: data.name
+        };
+    }
+
+    getToken(): string | null {
+        const config = loadConfig();
+        return config?.token || null;
     }
 }

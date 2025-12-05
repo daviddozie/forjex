@@ -24,165 +24,163 @@ export async function forgeCommand(): Promise<void> {
         console.log(chalk.gray('  ━'.repeat(25)));
         console.log('\n');
 
-        const { actions } = await inquirer.prompt([
+        const { repoChoice } = await inquirer.prompt([
             {
-                type: 'checkbox',
-                name: 'actions',
-                message: 'What would you like forjex to do for you?',
+                type: 'list',
+                name: 'repoChoice',
+                message: 'What would you like to do with GitHub?',
                 choices: [
-                    { name: '✨ Create a new GitHub repository', value: 'github-new', checked: true },
-                    { name: '🔗 Push to an existing GitHub repository', value: 'github-existing' },
-                    { name: '⚙️ Add CI/CD pipeline (GitHub Actions)', value: 'cicd' },
-                    { name: '🚀 Deploy to Vercel', value: 'vercel' }],
-                validate: (choices) => choices.length > 0 || 'Please select at least one action'
+                    { name: '✨ Create a new GitHub repository', value: 'create-new' },
+                    { name: '🔗 Push to an existing GitHub repository', value: 'push-existing' }
+                ]
             }
         ]);
-       
-         console.log('\n');
 
-        const yellowFooter = chalk.yellow.bold(
-            "\n   ↑↓ NAVIGATE\n" +
-            "   SPACE = SELECT\n" +
-            "   A = SELECT ALL\n" +
-            "   I = INVERT\n" +
-            "   ENTER = SUBMIT\n"
-        );
+        console.log('\n');
 
-        const originalRender = (inquirer as any).ui?.Prompt?.prototype?.render;
-
-        (inquirer as any).ui.Prompt.prototype.render = function (this: any, ...args: any[]) {
-            if (typeof originalRender === 'function') {
-                originalRender.apply(this, args);
+        const { addCICD } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'addCICD',
+                message: 'Would you like to add a CI/CD pipeline (GitHub Actions)?',
+                default: true
             }
+        ]);
 
-            // Move to next line and print custom footer (guarded for safety)
-            if (this && this.screen && typeof this.screen.render === 'function') {
-                this.screen.render(
-                    chalk.yellow.bold(this.opt?.message || ''),
-                    yellowFooter
-                );
+        console.log('\n');
+
+        const { deployVercel } = await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'deployVercel',
+                message: 'Would you like to deploy to Vercel?',
+                default: true
             }
-        };
+        ]);
 
-        const shouldCreateNewRepo = actions.includes('github-new');
-        const shouldPushToExisting = actions.includes('github-existing');
-        const shouldPushToGitHub = shouldCreateNewRepo || shouldPushToExisting;
-        const shouldAddCICD = actions.includes('cicd');
-        const shouldDeployToVercel = actions.includes('vercel');
+        console.log('\n');
 
+        // Now start the processes
         let githubService: GitHubService | null = null;
         let repoUrl: string = '';
+        let repoOwner: string = '';
+        let repoName: string = '';
 
-        // GitHub Setup (if selected)
-        if (shouldPushToGitHub) {
-            githubService = new GitHubService();
-            await githubService.authenticate();
+        // Authenticate with GitHub
+        githubService = new GitHubService();
+        await githubService.authenticate();
+
+        console.log('\n');
+
+        // Handle repository creation/selection
+        if (repoChoice === 'create-new') {
+            const gitService = new GitService();
+
+            const answers = await inquirer.prompt<RepoOptions>([
+                {
+                    type: 'input',
+                    name: 'name',
+                    message: 'Repository name:',
+                    validate: (input) => input.length > 0 || 'Repository name is required'
+                },
+                {
+                    type: 'input',
+                    name: 'description',
+                    message: 'Description (optional):'
+                },
+                {
+                    type: 'confirm',
+                    name: 'isPrivate',
+                    message: 'Make repository private?',
+                    default: false
+                },
+                {
+                    type: 'confirm',
+                    name: 'addReadme',
+                    message: 'Add README.md?',
+                    default: true
+                },
+                {
+                    type: 'list',
+                    name: 'gitignore',
+                    message: 'Add .gitignore template (optional):',
+                    choices: ['None', 'Node', 'Python', 'Java', 'Go', 'Rust'],
+                    filter: (val) => val === 'None' ? undefined : val
+                },
+                {
+                    type: 'list',
+                    name: 'license',
+                    message: 'Choose a license:',
+                    choices: ['None', 'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD-3-Clause'],
+                    filter: (val) => val === 'None' ? undefined : val
+                }
+            ]);
 
             console.log('\n');
 
-            if (shouldCreateNewRepo) {
-                const gitService = new GitService();
+            repoUrl = await githubService.createRepository(answers);
+            repoName = answers.name;
 
-                const answers = await inquirer.prompt<RepoOptions>([
-                    {
-                        type: 'input',
-                        name: 'name',
-                        message: 'Repository name:',
-                        validate: (input) => input.length > 0 || 'Repository name is required'
-                    },
-                    {
-                        type: 'input',
-                        name: 'description',
-                        message: 'Description (optional):'
-                    },
-                    {
-                        type: 'confirm',
-                        name: 'isPrivate',
-                        message: 'Make repository private?',
-                        default: false
-                    },
+            const userInfo = await githubService.getUserInfo();
+            repoOwner = userInfo.login;
+
+            gitService.createLocalFiles({
+                readme: answers.addReadme,
+                gitignore: answers.gitignore,
+                license: answers.license
+            });
+
+        } else if (repoChoice === 'push-existing') {
+            const gitService = new GitService();
+            const existingRemote = await gitService.getRemoteUrl();
+
+            if (existingRemote) {
+                const { useExisting } = await inquirer.prompt([
                     {
                         type: 'confirm',
-                        name: 'addReadme',
-                        message: 'Add README.md?',
+                        name: 'useExisting',
+                        message: `Found existing remote: ${chalk.cyan(existingRemote)}\nUse this repository?`,
                         default: true
-                    },
-                    {
-                        type: 'list',
-                        name: 'gitignore',
-                        message: 'Add .gitignore template(optional):',
-                        choices: ['None', 'Node', 'Python', 'Java', 'Go', 'Rust'],
-                        filter: (val) => val === 'None' ? undefined : val
-                    },
-                    {
-                        type: 'list',
-                        name: 'license',
-                        message: 'Choose a license:',
-                        choices: ['None', 'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD-3-Clause'],
-                        filter: (val) => val === 'None' ? undefined : val
                     }
                 ]);
 
-                console.log('\n');
-
-                repoUrl = await githubService.createRepository(answers);
-
-                gitService.createLocalFiles({
-                    readme: answers.addReadme,
-                    gitignore: answers.gitignore,
-                    license: answers.license
-                });
-
-            } else if (shouldPushToExisting) {
-                // Push to existing repository
-                const gitService = new GitService();
-                const existingRemote = await gitService.getRemoteUrl();
-
-                if (existingRemote) {
-                    // Found existing remote
-                    const { useExisting } = await inquirer.prompt([
-                        {
-                            type: 'confirm',
-                            name: 'useExisting',
-                            message: `Found existing remote: ${chalk.cyan(existingRemote)}\nUse this repository?`,
-                            default: true
-                        }
-                    ]);
-
-                    if (useExisting) {
-                        repoUrl = existingRemote;
-                        logger.success(`✅ Using existing repository`);
-                        console.log('\n');
-                    }
-                }
-
-                // If no remote found or user declined
-                if (!repoUrl) {
-                    const { existingRepoUrl } = await inquirer.prompt([
-                        {
-                            type: 'input',
-                            name: 'existingRepoUrl',
-                            message: 'Enter the existing repository URL:',
-                            validate: (input) => {
-                                if (!input) return 'Repository URL is required';
-                                if (!input.includes('github.com')) return 'Please enter a valid GitHub repository URL';
-                                return true;
-                            }
-                        }
-                    ]);
-
-                    repoUrl = existingRepoUrl;
-                    logger.info(`Using repository: ${chalk.cyan(repoUrl)}`);
+                if (useExisting) {
+                    repoUrl = existingRemote;
+                    const repoInfo = extractRepoInfo(existingRemote);
+                    repoOwner = repoInfo.owner;
+                    repoName = repoInfo.name;
+                    logger.success(`✅ Using existing repository`);
                     console.log('\n');
                 }
+            }
+
+            if (!repoUrl) {
+                const { existingRepoUrl } = await inquirer.prompt([
+                    {
+                        type: 'input',
+                        name: 'existingRepoUrl',
+                        message: 'Enter the existing repository URL:',
+                        validate: (input) => {
+                            if (!input) return 'Repository URL is required';
+                            if (!input.includes('github.com')) return 'Please enter a valid GitHub repository URL';
+                            return true;
+                        }
+                    }
+                ]);
+
+                repoUrl = existingRepoUrl;
+                const repoInfo = extractRepoInfo(existingRepoUrl);
+                repoOwner = repoInfo.owner;
+                repoName = repoInfo.name;
+                logger.info(`Using repository: ${chalk.cyan(repoUrl)}`);
+                console.log('\n');
             }
         }
 
         const detector = new ProjectDetector();
         const projectConfig = detector.detect();
 
-        // CI/CD Setup (if selected)
-        if (shouldAddCICD) {
+        if (addCICD) {
             if (projectConfig.type !== 'unknown') {
                 const cicdGenerator = new CICDGenerator(projectConfig);
                 cicdGenerator.generate();
@@ -191,10 +189,10 @@ export async function forgeCommand(): Promise<void> {
             }
         }
 
-        if (shouldPushToGitHub && repoUrl) {
+        if (repoUrl) {
             const gitService = new GitService();
             const isRepo = await gitService.isGitRepository();
-            const isExisting = shouldPushToExisting || (isRepo && !shouldCreateNewRepo);
+            const isExisting = repoChoice === 'push-existing' || (isRepo && repoChoice !== 'create-new');
 
             if (isRepo && !isExisting) {
                 logger.warn('Directory is already a git repository');
@@ -219,31 +217,63 @@ export async function forgeCommand(): Promise<void> {
         }
 
         let vercelUrl = '';
-        if (shouldDeployToVercel) {
+        if (deployVercel) {
             const vercelService = new VercelService();
             await vercelService.authenticate();
 
-            const projectName = repoUrl
-                ? repoUrl.split('/').pop()?.replace('.git', '') || 'my-project'
-                : process.cwd().split('/').pop() || 'my-project';
+            const projectName = repoName ||
+                (repoUrl ? repoUrl.split('/').pop()?.replace('.git', '') : undefined) ||
+                process.cwd().split('/').pop() ||
+                'my-project';
 
-            const deployment = await vercelService.deploy(projectName, projectConfig, repoUrl);
-            vercelUrl = deployment.url;
+            // Deploy with GitHub integration
+            if (repoUrl && repoOwner && repoName) {
+                const deployment = await vercelService.deployWithGitHub(
+                    projectName,
+                    projectConfig,
+                    repoOwner,
+                    repoName
+                );
+                vercelUrl = deployment.url;
+            } else {
+                const deployment = await vercelService.deploy(projectName, projectConfig);
+                vercelUrl = deployment.url;
+            }
         }
 
+        // Final success message
         console.log('\n');
         logger.success('🎉 All done! Your project is ready.\n');
+
         if (repoUrl) {
             console.log(chalk.gray('  📦 GitHub Repository:'));
             console.log(chalk.cyan.bold(`     ${repoUrl}\n`));
         }
+
         if (vercelUrl) {
             console.log(chalk.gray('  🚀 Live Deployment:'));
             console.log(chalk.magenta.bold(`     ${vercelUrl}\n`));
+
+            if (repoUrl) {
+                console.log(chalk.green('  ✅ Auto-deployment enabled!'));
+                console.log(chalk.gray('     Future pushes to main will automatically deploy\n'));
+            }
         }
 
     } catch (error: any) {
         logger.error(error.message || 'An error occurred');
         process.exit(1);
     }
+}
+
+// Helper function to extract owner and repo name from GitHub URL
+function extractRepoInfo(repoUrl: string): { owner: string; name: string } {
+    const match = repoUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
+    if (match) {
+        return {
+            owner: match[1],
+            name: match[2].replace('.git', '')
+        };
+    }
+    throw new Error('Invalid GitHub repository URL');
 }
