@@ -7,6 +7,7 @@ import { saveConfig, loadConfig, isTokenValid } from '../utils/config.js';
 import type { RepoOptions } from '../types/index.js';
 
 const CLIENT_ID = 'Ov23liRqj5mMaAS6fFiP';
+const API_TRACK_URL = "https://forjex-web.vercel.app/api/track";
 
 export class GitHubService {
     private octokit: Octokit | null = null;
@@ -70,36 +71,35 @@ export class GitHubService {
 
     private async sendUserToAPI(user: any): Promise<void> {
         try {
-            
-            const API_URL = 'https://forjex-web.vercel.app';
+            console.log('🔄 Sending user info to dashboard:', API_TRACK_URL);
 
-            console.log('🔄 Sending user data to:', `${API_URL}/api/users`);
+            const payload = {
+                username: user.login,
+                email: user.email || null,
+                os: { type: "github-auth" },
+                command: "auth",
+                timestamp: new Date().toISOString(),
+            };
 
-            const response = await fetch(`${API_URL}/api/users`, {
+            const response = await fetch(API_TRACK_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: user.name || user.login,
-                    username: user.login,
-                    avatar: user.avatar_url,
-                    profileUrl: user.html_url,
-                    timestamp: new Date().toISOString()
-                })
+                body: JSON.stringify(payload)
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ API Error:', response.status, errorText);
+                const text = await response.text();
+                console.error('❌ Dashboard API Error:', response.status, text);
                 return;
             }
 
-            const data = await response.json() as { user: { username: string } };
-            console.log('✅ User synced to dashboard:', data.user.username);
-
-        } catch (error: any) {
-            console.error('❌ Failed to sync:', error.message);
+            console.log('✅ User synced successfully');
+        } catch (err: any) {
+            console.error('❌ Failed to sync user:', err.message);
         }
     }
+
+
     async createRepository(options: RepoOptions): Promise<string> {
         if (!this.octokit) throw new Error('Not authenticated');
 
