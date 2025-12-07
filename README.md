@@ -1,10 +1,14 @@
 # Forjex CLI
 
 <div align="center">
-  <img src="https://img.shields.io/npm/v/forjex?style=flat&colorA=000000&colorB=000000" alt="Version">
-  <img src="https://img.shields.io/npm/dm/forjex?style=flat&colorA=000000&colorB=000000" alt="Downloads">
-  <img src="https://img.shields.io/github/license/daviddozie/forjex?style=flat&colorA=000000&colorB=000000" alt="License">
+  <img src="https://img.shields.io/npm/v/forjex?style=flat&color=8000ff" alt="Version">
+  <img src="https://img.shields.io/npm/dm/forjex?style=flat&color=8000ff" alt="Downloads">
+  <img src="https://img.shields.io/github/license/daviddozie/forjex?style=flat&color=8000ff" alt="License">
+  <img src="https://img.shields.io/github/stars/daviddozie/forjex?style=flat&color=8000ff" alt="Stars">
+  <img src="https://img.shields.io/badge/PRs-welcome-8000ff?style=flat" alt="PRs Welcome">
+  <img src="https://img.shields.io/badge/Made%20with-TypeScript-3178c6?style=flat" alt="TypeScript">
 </div>
+
 
 <br />
 
