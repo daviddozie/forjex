@@ -7,7 +7,7 @@ import { saveConfig, loadConfig, isTokenValid } from '../utils/config.js';
 import type { RepoOptions } from '../types/index.js';
 
 const CLIENT_ID = 'Ov23liRqj5mMaAS6fFiP';
-const API_TRACK_URL = "https://forjex-web.vercel.app/api/track";
+const API_TRACK_URL = "https://forjex.vercel.app/api/track";
 
 export class GitHubService {
     private octokit: Octokit | null = null;
