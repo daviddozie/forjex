@@ -119,13 +119,6 @@ export async function forgeCommand(): Promise<void> {
                     choices: ['None', 'Node', 'Python', 'Java', 'Go', 'Rust'],
                     filter: (val: any) => val === 'None' ? undefined : val
                 },
-                {
-                    type: 'rawlist',
-                    name: 'license',
-                    message: 'Choose a license:',
-                    choices: ['None', 'MIT', 'Apache-2.0', 'GPL-3.0', 'BSD-3-Clause'],
-                    filter: (val: any) => val === 'None' ? undefined : val
-                }
             ]);
 
             console.log('\n');
