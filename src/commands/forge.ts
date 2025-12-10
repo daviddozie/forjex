@@ -116,7 +116,7 @@ export async function forgeCommand(): Promise<void> {
                     type: 'rawlist',
                     name: 'gitignore',
                     message: 'Add .gitignore template:',
-                    choices: ['None', 'Node', 'Python', 'Java', 'Go', 'Rust'],
+                    choices: ['None', 'Node(JavaScript)', 'Python', 'Java', 'Go', 'Rust'],
                     filter: (val: any) => val === 'None' ? undefined : val
                 },
             ]);
