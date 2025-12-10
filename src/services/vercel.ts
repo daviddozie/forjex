@@ -173,7 +173,7 @@ export class VercelService {
                     timeout: 10000
                 });
             } catch (gitError) {
-                logger.warn('⚠️  Auto-deployment setup incomplete. You may need to connect GitHub manually.');
+                logger.warn('⚠️  If Auto deployment setup is incomplete. You may need to connect GitHub manually.');
                 console.log(chalk.gray('   Visit: ') + chalk.cyan(`https://vercel.com/dashboard`));
                 console.log(chalk.gray('   Then: Project Settings → Git → Connect Repository\n'));
             }
