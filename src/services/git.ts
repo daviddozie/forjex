@@ -55,7 +55,7 @@ export class GitService {
                 // Merge stderr into output so we capture all error details
             });
 
-            spinner.succeed(`Build passed — code is clean`);
+            spinner.succeed(`✅ Build passed — code is clean`);
 
             // Show last few lines of build output as confirmation
             const lines = output.trim().split('\n').filter(Boolean);
@@ -138,6 +138,17 @@ export class GitService {
                     logger.info('Added remote origin');
                 }
 
+                // Pull remote changes FIRST so local is up to date before committing
+                try {
+                    spinner.text = '⬇️  Pulling remote changes...';
+                    await this.git.pull('origin', 'main', ['--rebase', '--allow-unrelated-histories']);
+                } catch (pullError: any) {
+                    // Ignore "couldn't find remote ref" — means remote branch doesn't exist yet
+                    if (!pullError.message.includes('couldn\'t find remote ref')) {
+                        console.log(chalk.yellow('\n  ⚠️  Could not pull: ' + pullError.message));
+                    }
+                }
+
                 spinner.text = '📁 Adding files...';
                 await this.git.add('.');
 
@@ -150,17 +161,6 @@ export class GitService {
 
                 spinner.start('💾 Creating commit...');
                 await this.git.commit(commitMessage);
-
-                spinner.text = '🚀 Pushing to GitHub...';
-
-                try {
-                    spinner.text = '⬇️  Pulling remote changes...';
-                    await this.git.pull('origin', 'main', ['--rebase', '--allow-unrelated-histories']);
-                } catch (pullError: any) {
-                    if (!pullError.message.includes('couldn\'t find remote ref')) {
-                        console.log(chalk.yellow('\n  ⚠️  Could not pull: ' + pullError.message));
-                    }
-                }
 
                 spinner.text = '🚀 Pushing to GitHub...';
                 await this.git.push('origin', 'main', ['--set-upstream']);
@@ -190,7 +190,7 @@ export class GitService {
                 await this.git.push('origin', 'main', ['--set-upstream']);
             }
 
-            spinner.succeed('Code pushed to GitHub successfully!');
+            spinner.succeed('✅ Code pushed to GitHub successfully!');
         } catch (error: any) {
             spinner.fail('Failed to push to GitHub');
             throw error;
