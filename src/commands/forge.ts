@@ -116,7 +116,7 @@ export async function forgeCommand(): Promise<void> {
                     type: 'rawlist',
                     name: 'gitignore',
                     message: 'Add .gitignore template:',
-                    choices: ['None', 'Node', 'Python', 'Java', 'Go', 'Rust'],
+                    choices: ['None', 'Node(JavaScript)', 'Python', 'Java', 'Go', 'Rust'],
                     filter: (val: any) => val === 'None' ? undefined : val
                 },
             ]);
@@ -189,6 +189,7 @@ export async function forgeCommand(): Promise<void> {
             }
         }
 
+        // Detect project type (needed for build check + CI/CD)
         const detector = new ProjectDetector();
         const projectConfig = detector.detect();
         console.log('\n');
@@ -220,11 +221,20 @@ export async function forgeCommand(): Promise<void> {
             console.log('\n');
         }
 
-
         if (repoUrl) {
-            console.log(chalk.blue.bold('  STEP 4: Pushing Code to GitHub\n'));
+            // ── BUILD CHECK ──────────────────────────────────────────────
+            console.log(chalk.blue.bold('  STEP 4: Running Build Check\n'));
 
             const gitService = new GitService();
+
+            // This will throw + print helpful errors if the build fails,
+            // preventing the push from ever happening.
+            await gitService.runBuildCheck(projectConfig);
+            console.log('\n');
+
+            // ── PUSH TO GITHUB ───────────────────────────────────────────
+            console.log(chalk.blue.bold('  STEP 5: Pushing Code to GitHub\n'));
+
             const isRepo = await gitService.isGitRepository();
             const isExisting = repoChoice === 'github-existing';
 
@@ -255,7 +265,7 @@ export async function forgeCommand(): Promise<void> {
         let vercelUrl = '';
 
         if (deployVercel) {
-            console.log(chalk.blue.bold('  STEP 5: Deploying to Vercel\n'));
+            console.log(chalk.blue.bold('  STEP 6: Deploying to Vercel\n'));
 
             const vercelService = new VercelService();
             await vercelService.authenticate();
@@ -265,7 +275,6 @@ export async function forgeCommand(): Promise<void> {
                 process.cwd().split('/').pop() ||
                 'my-project';
 
-            // Deploy (vercel.json already created)
             if (repoUrl && repoOwner && repoName) {
                 const deployment = await vercelService.deployWithGitHub(
                     projectName,
@@ -297,14 +306,18 @@ export async function forgeCommand(): Promise<void> {
             console.log(chalk.magenta.bold(`     ${vercelUrl}\n`));
 
             if (repoUrl) {
-                console.log(chalk.green('  ✅ Auto-deployment enabled!'));
+                console.log(chalk.green('Auto-deployment enabled!'));
                 console.log(chalk.gray('     Future pushes to main will automatically deploy\n'));
             }
         }
 
     } catch (error: any) {
-        logger.error(error.message || 'An error occurred');
-        console.error(error);
+        // Build failure already printed its own detailed message,
+        // so only show the raw error for unexpected failures.
+        if (!error.message?.startsWith('Build failed:')) {
+            logger.error(error.message || 'An error occurred');
+            console.error(error);
+        }
         process.exit(1);
     }
 }
