@@ -1,8 +1,10 @@
 import simpleGit, { SimpleGit } from 'simple-git';
+import { execSync } from 'child_process';
 import { logger } from '../utils/logger.js';
 import { writeFileSync, existsSync } from 'fs';
 import { CommitMessageGenerator } from './commit-generator.js';
 import chalk from 'chalk';
+import type { ProjectConfig } from '../types/index.js';
 
 export class GitService {
     private git: SimpleGit;
@@ -35,6 +37,74 @@ export class GitService {
         }
 
         spinner.succeed('📁 Project files created');
+    }
+
+    async runBuildCheck(projectConfig: ProjectConfig): Promise<void> {
+        // Skip if no build command available
+        if (!projectConfig.buildCommand || projectConfig.type === 'unknown') {
+            logger.warn('⚠️  No build command detected — skipping build check');
+            return;
+        }
+
+        const spinner = logger.spinner(`🔨 Running build check: ${chalk.cyan(projectConfig.buildCommand)}`);
+
+        try {
+            const output = execSync(projectConfig.buildCommand, {
+                encoding: 'utf-8',
+                stdio: 'pipe',
+                // Merge stderr into output so we capture all error details
+            });
+
+            spinner.succeed(`Build passed — code is clean`);
+
+            // Show last few lines of build output as confirmation
+            const lines = output.trim().split('\n').filter(Boolean);
+            if (lines.length > 0) {
+                const preview = lines.slice(-3).join('\n');
+                console.log(chalk.gray(`\n     ${preview.split('\n').join('\n     ')}\n`));
+            }
+
+        } catch (error: any) {
+            spinner.fail('❌ Build failed — push aborted');
+
+            console.log('\n');
+            console.log(chalk.red('━'.repeat(50)));
+            console.log(chalk.red.bold('  BUILD ERRORS'));
+            console.log(chalk.red('━'.repeat(50)));
+
+            // Combine stdout + stderr for full picture
+            const rawOutput = [error.stdout, error.stderr]
+                .filter(Boolean)
+                .join('\n')
+                .trim();
+
+            if (rawOutput) {
+                const lines = rawOutput.split('\n');
+
+                lines.forEach((line: string) => {
+                    // Highlight error lines red, warning lines yellow, rest gray
+                    if (/error/i.test(line)) {
+                        console.log(chalk.red(`  ${line}`));
+                    } else if (/warning|warn/i.test(line)) {
+                        console.log(chalk.yellow(`  ${line}`));
+                    } else if (line.trim()) {
+                        console.log(chalk.gray(`  ${line}`));
+                    }
+                });
+            } else {
+                console.log(chalk.red('  Build process exited with errors but produced no output.'));
+                console.log(chalk.gray('  Try running the build command manually to investigate:'));
+                console.log(chalk.cyan(`  ${projectConfig.buildCommand}`));
+            }
+
+            console.log(chalk.red('━'.repeat(50)));
+            console.log('\n');
+            console.log(chalk.yellow('  💡 Fix the errors above, then run ') + chalk.cyan('forjex forge') + chalk.yellow(' again.'));
+            console.log('\n');
+
+            // Throw so forge.ts can catch and exit cleanly
+            throw new Error(`Build failed: fix errors before pushing to GitHub`);
+        }
     }
 
     async initAndPush(repoUrl: string, isExistingRepo: boolean = false): Promise<void> {
@@ -120,7 +190,7 @@ export class GitService {
                 await this.git.push('origin', 'main', ['--set-upstream']);
             }
 
-            spinner.succeed('✅ Code pushed to GitHub successfully!');
+            spinner.succeed('Code pushed to GitHub successfully!');
         } catch (error: any) {
             spinner.fail('Failed to push to GitHub');
             throw error;
