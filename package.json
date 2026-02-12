@@ -20,7 +20,7 @@
   "author": "David Mgbede",
   "license": "MIT",
   "bin": {
-    "forjex": "./dist/index.js"
+    "forjex": "dist/index.js"
   },
   "engines": {
     "node": ">=18.0.0"
