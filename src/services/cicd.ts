@@ -288,7 +288,7 @@ jobs:
 
   private getInstallCommand(packageManager: string): string {
     const commands: Record<string, string> = {
-      npm: 'npm ci',
+      npm: 'npm install',
       yarn: 'yarn install --frozen-lockfile',
       pnpm: 'pnpm install --frozen-lockfile',
       bun: 'bun install --frozen-lockfile'
