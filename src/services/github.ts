@@ -16,7 +16,7 @@ export class GitHubService {
         const config = loadConfig();
 
         if (config && isTokenValid(config)) {
-            this.octokit = new Octokit({ auth: config.token });
+            this.octokit = new Octokit({ auth: config.githubToken || config.token });
             logger.success('🔑 Already authenticated with GitHub');
             return;
         }
@@ -49,6 +49,8 @@ export class GitHubService {
 
             // Save to local config
             saveConfig({
+                ...loadConfig(),
+                githubToken: token,
                 token,
                 expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000),
                 user: {

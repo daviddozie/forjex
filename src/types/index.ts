@@ -13,14 +13,17 @@ export interface RepoOptions {
 export interface AuthConfig {
     token?: string;
     expiresAt?: number;
+    githubToken?: string;
     vercelToken?: string;
     vercelTeamId?: string;
+    cloudUrl?: string;
     user?: {
         name: string;
         username: string;
         avatar: string;
         profileUrl: string;
     };
+    loggedInAt?: string;
 }
 
 export interface ProjectConfig {
@@ -33,6 +36,7 @@ export interface ProjectConfig {
 }
 
 export interface VercelDeployment {
+    autoDeploy?: boolean;
     url: string;
     deploymentUrl: string;
     projectId: string;

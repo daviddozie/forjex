@@ -6,7 +6,9 @@ import { GitService } from '../services/git.js';
 import { ProjectDetector } from '../services/detector.js';
 import { CICDGenerator } from '../services/cicd.js';
 import { VercelService } from '../services/vercel.js';
+import { CloudSyncService } from '../services/cloud-sync.js';
 import { logger } from '../utils/logger.js';
+import { getCloudUrl } from '../utils/config.js';
 import type { RepoOptions } from '../types/index.js';
 
 export async function forgeCommand(): Promise<void> {
@@ -263,6 +265,7 @@ export async function forgeCommand(): Promise<void> {
         }
 
         let vercelUrl = '';
+        let autoDeploy = false;
 
         if (deployVercel) {
             console.log(chalk.blue.bold('  STEP 6: Deploying to Vercel\n'));
@@ -283,9 +286,11 @@ export async function forgeCommand(): Promise<void> {
                     repoName
                 );
                 vercelUrl = deployment.url;
+                autoDeploy = Boolean(deployment.autoDeploy);
             } else {
                 const deployment = await vercelService.deploy(projectName, projectConfig);
                 vercelUrl = deployment.url;
+                autoDeploy = Boolean(deployment.autoDeploy);
             }
             console.log('\n');
         }
@@ -305,9 +310,38 @@ export async function forgeCommand(): Promise<void> {
             console.log(chalk.gray('  🚀 Live Deployment:'));
             console.log(chalk.magenta.bold(`     ${vercelUrl}\n`));
 
-            if (repoUrl) {
+            if (autoDeploy) {
                 console.log(chalk.green('Auto-deployment enabled!'));
                 console.log(chalk.gray('     Future pushes to main will automatically deploy\n'));
+            }
+        }
+
+        // Automatic Cloud Sync to Dashboard & Neon PostgreSQL
+        if (repoUrl && repoOwner && repoName) {
+            try {
+                const cloudSync = new CloudSyncService();
+                const syncResult = await cloudSync.syncProject({
+                    name: repoName,
+                    repoOwner,
+                    repoName,
+                    repoUrl,
+                    description: projectConfig.framework || 'Bootstrapped with Forjex CLI',
+                    framework: projectConfig.framework || projectConfig.type || 'Web App',
+                    template: projectConfig.type || 'nextjs',
+                    isLive: true,
+                    addCICD,
+                    deployVercel,
+                    vercelUrl: vercelUrl || undefined,
+                });
+
+                if (syncResult.success && syncResult.persisted) {
+                    console.log(chalk.gray('  ☁️  Cloud Dashboard:'));
+                    console.log(chalk.blue.bold(`     ${getCloudUrl()}/dashboard\n`));
+                } else {
+                    logger.warn("Project setup completed, but cloud sync was not persisted. Check your cloud connection and database configuration.");
+                }
+            } catch {
+                // Non-fatal if cloud server is offline
             }
         }
 
