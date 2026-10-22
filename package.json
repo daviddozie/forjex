@@ -6,9 +6,13 @@
   "main": "./dist/index.js",
   "scripts": {
     "build": "tsup",
+    "build:cli": "tsup",
+    "build:web": "npm --prefix apps/web run build",
+    "build:all": "npm run build:cli && npm run build:web",
     "dev": "tsx src/index.ts",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:web": "npm --prefix apps/web run dev",
+    "prepublishOnly": "npm run build:cli",
+    "test": "npm --prefix apps/web run test"
   },
   "keywords": [
     "cli",
