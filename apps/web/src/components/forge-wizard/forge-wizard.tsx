@@ -441,7 +441,7 @@ export function ForgeWizard() {
                   <Checkbox
                     id="private-checkbox"
                     checked={isPrivate}
-                    onCheckedChange={(checked) => setIsPrivate(checked === true)}
+                    onCheckedChange={(checked: boolean | "indeterminate") => setIsPrivate(checked === true)}
                   />
                   <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
                     Make repository private
@@ -456,7 +456,7 @@ export function ForgeWizard() {
                   <Checkbox
                     id="readme-checkbox"
                     checked={addReadme}
-                    onCheckedChange={(checked) => setAddReadme(checked === true)}
+                    onCheckedChange={(checked: boolean | "indeterminate") => setAddReadme(checked === true)}
                   />
                   <span className="text-xs text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors">
                     Generate README.md
@@ -588,7 +588,7 @@ export function ForgeWizard() {
                 <Checkbox
                   id="cicd-checkbox"
                   checked={addCICD}
-                  onCheckedChange={(checked) => setAddCICD(checked === true)}
+                  onCheckedChange={(checked: boolean | "indeterminate") => setAddCICD(checked === true)}
                 />
               </div>
               <div className="flex-1">
@@ -614,7 +614,7 @@ export function ForgeWizard() {
                 <Checkbox
                   id="vercel-checkbox"
                   checked={deployVercel}
-                  onCheckedChange={(checked) => setDeployVercel(checked === true)}
+                  onCheckedChange={(checked: boolean | "indeterminate") => setDeployVercel(checked === true)}
                 />
               </div>
               <div className="flex-1">
