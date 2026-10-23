@@ -5,13 +5,22 @@ import * as React from 'react';
 import { TechnologyIcon, type Technology } from '@/components/ui/technology-icon';
 import Link from 'next/link';
 import { motion, type Variants } from 'framer-motion';
-import { ArrowRight, Terminal, CheckCircle2, ExternalLink, ChevronRight } from 'lucide-react';
+import {
+  ArrowRight,
+  Terminal,
+  CheckCircle2,
+  ExternalLink,
+  ChevronRight,
+  Check,
+  Copy,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CodeBlock } from '@/components/ui/code-block';
 import { ForgeWizard } from '@/components/forge-wizard/forge-wizard';
 import { PipelineAnimation } from '@/components/pipeline-animation';
 import { SpotlightCard } from '@/components/ui/spotlight-card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import {
   Accordion,
@@ -36,6 +45,90 @@ const itemAnim: Variants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
 };
+
+const heroCommand = 'npm install -g forjex && forjex forge';
+
+function HeroCommand() {
+  const [copyState, setCopyState] = React.useState<'idle' | 'copied' | 'error'>('idle');
+  const copyRequest = React.useRef(0);
+  const resetTimer = React.useRef<number | null>(null);
+
+  React.useEffect(
+    () => () => {
+      copyRequest.current += 1;
+      if (resetTimer.current !== null) window.clearTimeout(resetTimer.current);
+    },
+    [],
+  );
+
+  const handleCopy = async () => {
+    const requestId = ++copyRequest.current;
+    if (resetTimer.current !== null) {
+      window.clearTimeout(resetTimer.current);
+      resetTimer.current = null;
+    }
+    setCopyState('idle');
+    try {
+      await navigator.clipboard.writeText(heroCommand);
+      if (requestId !== copyRequest.current) return;
+      setCopyState('copied');
+      resetTimer.current = window.setTimeout(() => {
+        if (requestId === copyRequest.current) setCopyState('idle');
+        resetTimer.current = null;
+      }, 2000);
+    } catch {
+      if (requestId !== copyRequest.current) return;
+      setCopyState('error');
+    }
+  };
+
+  const copyLabel =
+    copyState === 'copied'
+      ? 'Command copied'
+      : copyState === 'error'
+        ? 'Could not copy. Select the command to copy it manually.'
+        : 'Copy CLI command';
+
+  return (
+    <div className="group relative overflow-hidden rounded-lg border border-neutral-300 bg-neutral-950 text-left font-mono text-xs text-neutral-100 shadow-lg dark:border-neutral-800">
+      <div className="overflow-x-auto p-4 pr-14 text-sm leading-relaxed">
+        <pre className="whitespace-pre font-mono text-neutral-200">
+          <code>{heroCommand}</code>
+        </pre>
+      </div>
+      <TooltipProvider delayDuration={100}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={handleCopy}
+              aria-label={copyLabel}
+              className="absolute right-3 top-3 cursor-pointer rounded-md bg-neutral-800/80 p-1.5 text-neutral-400 opacity-75 transition-all hover:bg-neutral-700 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 group-hover:opacity-100"
+            >
+              {copyState === 'copied' ? (
+                <Check className="h-3.5 w-3.5 text-emerald-400" aria-hidden="true" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">{copyLabel}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      {copyState === 'error' && (
+        <p
+          aria-hidden="true"
+          className="px-4 pb-4 font-sans text-xs leading-relaxed text-amber-300"
+        >
+          {copyLabel}
+        </p>
+      )}
+      <span role="status" className="sr-only">
+        {copyState !== 'idle' ? copyLabel : ''}
+      </span>
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
@@ -106,11 +199,7 @@ export default function HomePage() {
             </motion.div>
 
             <motion.div variants={itemAnim} className="mt-8 w-full max-w-md mx-auto">
-              <CodeBlock
-                code="npm install -g forjex && forjex forge"
-                language="bash"
-                className="text-left shadow-lg"
-              />
+              <HeroCommand />
             </motion.div>
           </motion.div>
         </div>
