@@ -50,19 +50,34 @@ const heroCommand = 'npm install -g forjex && forjex forge';
 
 function HeroCommand() {
   const [copyState, setCopyState] = React.useState<'idle' | 'copied' | 'error'>('idle');
+  const copyRequest = React.useRef(0);
+  const resetTimer = React.useRef<number | null>(null);
 
-  React.useEffect(() => {
-    if (copyState !== 'copied') return;
-    const timer = window.setTimeout(() => setCopyState('idle'), 2000);
-    return () => window.clearTimeout(timer);
-  }, [copyState]);
+  React.useEffect(
+    () => () => {
+      copyRequest.current += 1;
+      if (resetTimer.current !== null) window.clearTimeout(resetTimer.current);
+    },
+    [],
+  );
 
   const handleCopy = async () => {
+    const requestId = ++copyRequest.current;
+    if (resetTimer.current !== null) {
+      window.clearTimeout(resetTimer.current);
+      resetTimer.current = null;
+    }
     setCopyState('idle');
     try {
       await navigator.clipboard.writeText(heroCommand);
+      if (requestId !== copyRequest.current) return;
       setCopyState('copied');
+      resetTimer.current = window.setTimeout(() => {
+        if (requestId === copyRequest.current) setCopyState('idle');
+        resetTimer.current = null;
+      }, 2000);
     } catch {
+      if (requestId !== copyRequest.current) return;
       setCopyState('error');
     }
   };
