@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a reproducible problem in Forjex.
+title: '[Bug]: '
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. Wait for explicit maintainer approval before implementing a fix or opening a pull request.
+        Do not include credentials, personal data, or exploitable vulnerability details. Use private security reporting for vulnerabilities.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - CLI
+        - Starter templates
+        - Cloud web app
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include the command or page, inputs, and a minimal example.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include sanitized error output or screenshots where useful.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include Forjex, Node.js, package manager, OS, and browser versions as relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: approach
+    attributes:
+      label: Proposed approach
+      description: Optional. Explain how you would address the problem.
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to implement this fix after maintainer approval.
+        - label: I have searched existing issues and understand that implementation must wait for explicit maintainer approval.
+          required: true

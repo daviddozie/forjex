@@ -1,11 +1,11 @@
-import { Metadata } from "next";
-import { ForgeWizard } from "@/components/forge-wizard/forge-wizard";
-import { Badge } from "@/components/ui/badge";
+import { Metadata } from 'next';
+import { ForgeWizard } from '@/components/forge-wizard/forge-wizard';
+import { Badge } from '@/components/ui/badge';
 
 export const metadata: Metadata = {
-  title: "Cloud Forge Wizard — Forjex",
+  title: 'Forge Wizard — Forjex',
   description:
-    "Scaffold, configure GitHub repositories, setup CI/CD pipelines, and deploy live to Vercel in seconds.",
+    'Scaffold, configure GitHub repositories, setup CI/CD pipelines, and deploy live to Vercel in seconds.',
 };
 
 export default function ForgePage() {
@@ -16,10 +16,11 @@ export default function ForgePage() {
           Cloud Automation
         </Badge>
         <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-neutral-900 dark:text-white">
-          Cloud Forge Wizard
+          Forge Wizard
         </h1>
         <p className="text-xs sm:text-sm text-neutral-500 mt-2">
-          Create repositories, generate CI/CD actions, and deploy straight to Vercel without touching the command line.
+          Create repositories, generate CI/CD actions, and deploy straight to Vercel without
+          touching the command line.
         </p>
       </div>
 

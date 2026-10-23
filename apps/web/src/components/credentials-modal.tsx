@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 import {
   CheckCircle2,
   AlertCircle,
@@ -9,19 +9,19 @@ import {
   Shield,
   Loader2,
   Trash2,
-} from "lucide-react";
-import { GithubIcon, VercelIcon } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+} from 'lucide-react';
+import { GithubIcon, VercelIcon } from '@/components/ui/icons';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 
 interface CredentialsModalProps {
   isOpen: boolean;
@@ -29,12 +29,8 @@ interface CredentialsModalProps {
   onUpdated?: () => void;
 }
 
-export function CredentialsModal({
-  isOpen,
-  onClose,
-  onUpdated,
-}: CredentialsModalProps) {
-  const [loading, setLoading] = React.useState(true);
+export function CredentialsModal({ isOpen, onClose, onUpdated }: CredentialsModalProps) {
+  const [, setLoading] = React.useState(true);
   const [status, setStatus] = React.useState<{
     github: { connected: boolean; user?: any; source?: string };
     vercel: { connected: boolean; user?: any; source?: string };
@@ -43,19 +39,19 @@ export function CredentialsModal({
     vercel: { connected: false },
   });
 
-  const [githubPat, setGithubPat] = React.useState("");
-  const [vercelPat, setVercelPat] = React.useState("");
+  const [githubPat, setGithubPat] = React.useState('');
+  const [vercelPat, setVercelPat] = React.useState('');
   const [savingGithub, setSavingGithub] = React.useState(false);
   const [savingVercel, setSavingVercel] = React.useState(false);
   const [message, setMessage] = React.useState<{
     text: string;
-    type: "success" | "error";
+    type: 'success' | 'error';
   } | null>(null);
 
   const fetchStatus = React.useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/auth/credentials");
+      const res = await fetch('/api/auth/credentials');
       if (res.ok) {
         const data = await res.json();
         setStatus(data);
@@ -79,22 +75,22 @@ export function CredentialsModal({
     setSavingGithub(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/auth/credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ githubToken: githubPat.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to verify GitHub token");
+      if (!res.ok) throw new Error(data.error || 'Failed to verify GitHub token');
 
-      setMessage({ text: "GitHub token verified and saved!", type: "success" });
-      setGithubPat("");
+      setMessage({ text: 'GitHub token verified and saved!', type: 'success' });
+      setGithubPat('');
       await fetchStatus();
       onUpdated?.();
     } catch (err: any) {
       setMessage({
-        text: err.message || "Failed to save GitHub token",
-        type: "error",
+        text: err.message || 'Failed to save GitHub token',
+        type: 'error',
       });
     } finally {
       setSavingGithub(false);
@@ -106,48 +102,47 @@ export function CredentialsModal({
     setSavingVercel(true);
     setMessage(null);
     try {
-      const res = await fetch("/api/auth/credentials", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ vercelToken: vercelPat.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to verify Vercel token");
+      if (!res.ok) throw new Error(data.error || 'Failed to verify Vercel token');
 
-      setMessage({ text: "Vercel token verified and saved!", type: "success" });
-      setVercelPat("");
+      setMessage({ text: 'Vercel token verified and saved!', type: 'success' });
+      setVercelPat('');
       await fetchStatus();
       onUpdated?.();
     } catch (err: any) {
       setMessage({
-        text: err.message || "Failed to save Vercel token",
-        type: "error",
+        text: err.message || 'Failed to save Vercel token',
+        type: 'error',
       });
     } finally {
       setSavingVercel(false);
     }
   };
 
-  const handleDisconnect = async (target: "github" | "vercel") => {
+  const handleDisconnect = async (target: 'github' | 'vercel') => {
     try {
       await fetch(`/api/auth/credentials?target=${target}`, {
-        method: "DELETE",
+        method: 'DELETE',
       });
       setMessage({
-        text: `Disconnected ${target === "github" ? "GitHub" : "Vercel"}.`,
-        type: "success",
+        text: `Disconnected ${target === 'github' ? 'GitHub' : 'Vercel'}.`,
+        type: 'success',
       });
       await fetchStatus();
       onUpdated?.();
     } catch (e: any) {
-      setMessage({ text: e.message, type: "error" });
+      setMessage({ text: e.message, type: 'error' });
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-lg p-6 space-y-4">
-        {/* Header */}
         <DialogHeader className="text-left space-y-1">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-neutral-900 dark:text-white shrink-0">
@@ -166,16 +161,15 @@ export function CredentialsModal({
 
         <Separator />
 
-        {/* Feedback Alert */}
         {message && (
           <div
             className={`p-3 rounded-lg text-xs flex items-center gap-2 border ${
-              message.type === "success"
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                : "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
+              message.type === 'success'
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                : 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400'
             }`}
           >
-            {message.type === "success" ? (
+            {message.type === 'success' ? (
               <CheckCircle2 className="w-4 h-4 shrink-0" />
             ) : (
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -184,7 +178,6 @@ export function CredentialsModal({
           </div>
         )}
 
-        {/* GitHub Card */}
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 space-y-3 bg-neutral-50/50 dark:bg-neutral-900/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -212,7 +205,7 @@ export function CredentialsModal({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleDisconnect("github")}
+                onClick={() => handleDisconnect('github')}
                 className="text-xs text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/10 h-7 px-2.5 gap-1"
               >
                 <Trash2 className="w-3 h-3" />
@@ -221,7 +214,6 @@ export function CredentialsModal({
             </div>
           ) : (
             <div className="space-y-3 pt-1">
-              {/* OAuth Button */}
               <a href="/api/auth/github" className="block">
                 <Button className="w-full gap-2 text-xs h-8">
                   <GithubIcon className="w-3.5 h-3.5" />
@@ -236,7 +228,6 @@ export function CredentialsModal({
                 </span>
               </div>
 
-              {/* PAT input */}
               <div className="flex gap-2">
                 <Input
                   type="password"
@@ -252,18 +243,13 @@ export function CredentialsModal({
                   disabled={savingGithub || !githubPat.trim()}
                   className="text-xs shrink-0"
                 >
-                  {savingGithub ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    "Save"
-                  )}
+                  {savingGithub ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
                 </Button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Vercel Card */}
         <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 space-y-3 bg-neutral-50/50 dark:bg-neutral-900/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -291,7 +277,7 @@ export function CredentialsModal({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleDisconnect("vercel")}
+                onClick={() => handleDisconnect('vercel')}
                 className="text-xs text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/10 h-7 px-2.5 gap-1"
               >
                 <Trash2 className="w-3 h-3" />
@@ -328,18 +314,13 @@ export function CredentialsModal({
                   disabled={savingVercel || !vercelPat.trim()}
                   className="text-xs shrink-0"
                 >
-                  {savingVercel ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    "Save"
-                  )}
+                  {savingVercel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Save'}
                 </Button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer info */}
         <div className="pt-2 text-[11px] text-neutral-500 flex items-center gap-2 border-t border-neutral-200 dark:border-neutral-800">
           <Shield className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
           <span>Tokens are encrypted and stored in secure HTTP-only session cookies.</span>

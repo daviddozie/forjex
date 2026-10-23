@@ -1,10 +1,18 @@
-import { and, eq, isNull, or } from "drizzle-orm";
-import { projects } from "@/db/schema";
+import { and, eq, isNull, or } from 'drizzle-orm';
+import { projects } from '@/db/schema';
 
-export interface ProjectOwner { id?: string; username: string }
+export interface ProjectOwner {
+  id?: string;
+  username: string;
+}
 
-export function ownsProject(user: ProjectOwner, project: { userId: string | null; repoOwner: string }) {
-  return project.userId ? project.userId === user.id : project.repoOwner.toLowerCase() === user.username.toLowerCase();
+export function ownsProject(
+  user: ProjectOwner,
+  project: { userId: string | null; repoOwner: string },
+) {
+  return project.userId
+    ? project.userId === user.id
+    : project.repoOwner.toLowerCase() === user.username.toLowerCase();
 }
 
 export function ownedProjects(user: ProjectOwner) {

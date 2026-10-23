@@ -2,6 +2,7 @@
 node_modules/
 .pnp
 .pnp.js
+.pnpm-store/
 
 # Build output
 dist/
@@ -14,7 +15,6 @@ build/
 .env.*.local
 
 # IDE
-.vscode/
 .idea/
 *.swp
 *.swo

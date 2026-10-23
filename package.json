@@ -1,9 +1,12 @@
 {
   "name": "forjex",
-  "version": "1.6.4",
+  "version": "1.7.0",
   "type": "module",
   "description": "Automate GitHub repo creation and Vercel deployment",
   "main": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "build:cli": "tsup",
@@ -12,7 +15,15 @@
     "dev": "tsx src/index.ts",
     "dev:web": "npm --prefix apps/web run dev",
     "prepublishOnly": "npm run build:cli",
-    "test": "npm --prefix apps/web run test"
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test:cli && npm --prefix apps/web run test",
+    "test:cli": "node --import ./node_modules/tsx/dist/loader.mjs --test tests/*.test.mts",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix --max-warnings 0",
+    "typecheck": "npm run typecheck:cli && npm run typecheck:web",
+    "typecheck:cli": "tsc --noEmit",
+    "typecheck:web": "tsc --project apps/web/tsconfig.json --noEmit --incremental false"
   },
   "keywords": [
     "cli",
@@ -44,11 +55,18 @@
     "simple-git": "^3.30.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^15.5.28",
     "@types/figlet": "^1.7.0",
     "@types/inquirer": "^9.0.9",
     "@types/node": "^24.10.1",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^16.5.0",
+    "prettier": "^3.9.10",
     "tsup": "^8.5.1",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.0"
   }
 }

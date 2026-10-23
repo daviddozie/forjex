@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import React, { useRef, useState } from "react";
-import { cn } from "@/lib/utils";
+import React, { useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
 
 interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
@@ -12,7 +12,7 @@ interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
 export function SpotlightCard({
   children,
   className,
-  spotlightColor = "rgba(255, 255, 255, 0.08)",
+  spotlightColor = 'rgba(255, 255, 255, 0.08)',
   ...props
 }: SpotlightCardProps) {
   const divRef = useRef<HTMLDivElement>(null);
@@ -40,8 +40,8 @@ export function SpotlightCard({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        "relative rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden transition-all duration-300",
-        className
+        'relative rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden transition-all duration-300',
+        className,
       )}
       {...props}
     >

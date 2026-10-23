@@ -1,20 +1,17 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  GithubIcon,
-  VercelIcon,
-} from "@/components/ui/icons";
+} from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { GithubIcon, VercelIcon } from '@/components/ui/icons';
 import {
   Shield,
   Key,
@@ -23,7 +20,7 @@ import {
   AlertCircle,
   Loader2,
   ArrowRight,
-} from "lucide-react";
+} from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -32,9 +29,9 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
-  const [activeTab, setActiveTab] = React.useState<"oauth" | "pat">("oauth");
-  const [githubPat, setGithubPat] = React.useState("");
-  const [vercelToken, setVercelToken] = React.useState("");
+  const [activeTab, setActiveTab] = React.useState<'oauth' | 'pat'>('oauth');
+  const [githubPat, setGithubPat] = React.useState('');
+  const [vercelToken, setVercelToken] = React.useState('');
   const [submitting, setSubmitting] = React.useState(false);
   const [oauthLoading, setOauthLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -43,13 +40,13 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   const handleOAuthClick = () => {
     setOauthLoading(true);
     setError(null);
-    window.location.href = "/api/auth/github";
+    window.location.href = '/api/auth/github';
   };
 
   const handleTokenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!githubPat.trim()) {
-      setError("Please enter your GitHub Personal Access Token.");
+      setError('Please enter your GitHub Personal Access Token.');
       return;
     }
     setSubmitting(true);
@@ -57,9 +54,9 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
     setSuccess(null);
 
     try {
-      const res = await fetch("/api/auth/pat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/pat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           githubPat: githubPat.trim(),
           vercelToken: vercelToken.trim() || undefined,
@@ -69,19 +66,19 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to authenticate with GitHub token.");
+        throw new Error(data.error || 'Failed to authenticate with GitHub token.');
       }
 
-      setSuccess(`Signed in successfully as @${data.user?.username || "developer"}!`);
+      setSuccess(`Signed in successfully as @${data.user?.username || 'developer'}!`);
       setTimeout(() => {
         onSuccess?.();
         onClose();
         setSuccess(null);
-        setGithubPat("");
-        setVercelToken("");
+        setGithubPat('');
+        setVercelToken('');
       }, 900);
     } catch (err: any) {
-      setError(err.message || "Failed to sign in. Please verify your token.");
+      setError(err.message || 'Failed to sign in. Please verify your token.');
     } finally {
       setSubmitting(false);
     }
@@ -90,11 +87,10 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="w-full max-w-[560px] sm:max-w-[580px] bg-white dark:bg-black/95 border-neutral-200 dark:border-zinc-800 text-neutral-900 dark:text-white backdrop-blur-2xl p-0 overflow-hidden shadow-2xl rounded-2xl">
-
         <div className="p-7 sm:p-9 pt-6 sm:pt-7">
           <DialogHeader className="mb-6 text-left">
             <DialogTitle className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white mb-2">
-              Sign in to Forjex Cloud
+              Sign in to Forjex
             </DialogTitle>
             <DialogDescription className="text-sm text-neutral-500 dark:text-zinc-400 leading-relaxed">
               Access your cloud workspace, isolated repositories, and automated CI/CD deployments.
@@ -118,7 +114,7 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
           <Tabs
             value={activeTab}
             onValueChange={(val) => {
-              setActiveTab(val as "oauth" | "pat");
+              setActiveTab(val as 'oauth' | 'pat');
               setError(null);
             }}
             className="w-full"
@@ -138,7 +134,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               </TabsTrigger>
             </TabsList>
 
-            {/* TAB 1: GITHUB OAUTH */}
             <TabsContent value="oauth" className="mt-0 space-y-5">
               <div className="p-5 rounded-2xl bg-neutral-50 dark:bg-zinc-900/50 border border-neutral-200 dark:border-zinc-800/80 space-y-3.5">
                 <div className="flex items-center gap-3.5">
@@ -146,7 +141,9 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                     <GithubIcon className="h-5 w-5 text-neutral-900 dark:text-white" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-neutral-900 dark:text-white">1-Click GitHub Sign In</h4>
+                    <h4 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      1-Click GitHub Sign In
+                    </h4>
                     <p className="text-xs text-neutral-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                       Authorizes repository scaffolding and CI/CD pipeline triggers.
                     </p>
@@ -179,10 +176,10 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               </Button>
 
               <p className="text-center text-xs text-neutral-500 dark:text-zinc-400 pt-1">
-                Prefer using your own Personal Access Token?{" "}
+                Prefer using your own Personal Access Token?{' '}
                 <button
                   type="button"
-                  onClick={() => setActiveTab("pat")}
+                  onClick={() => setActiveTab('pat')}
                   className="text-neutral-900 dark:text-zinc-200 underline underline-offset-2 hover:text-neutral-700 dark:hover:text-white transition-colors"
                 >
                   Use Token
@@ -190,7 +187,6 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
               </p>
             </TabsContent>
 
-            {/* TAB 2: PERSONAL ACCESS TOKEN */}
             <TabsContent value="pat" className="mt-0">
               <form onSubmit={handleTokenSubmit} className="space-y-4">
                 <div className="space-y-1.5">
@@ -217,7 +213,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                     autoFocus
                   />
                   <p className="text-[11px] text-neutral-500 dark:text-zinc-400">
-                    Requires scopes: <code className="text-neutral-800 dark:text-zinc-300 font-mono">repo</code> and{" "}
+                    Requires scopes:{' '}
+                    <code className="text-neutral-800 dark:text-zinc-300 font-mono">repo</code> and{' '}
                     <code className="text-neutral-800 dark:text-zinc-300 font-mono">workflow</code>.
                   </p>
                 </div>
@@ -226,7 +223,8 @@ export function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-medium text-neutral-700 dark:text-zinc-300 flex items-center gap-1.5">
                       <VercelIcon className="h-3.5 w-3.5 text-neutral-500 dark:text-zinc-400" />
-                      Vercel Token <span className="text-neutral-400 dark:text-zinc-500">(Optional)</span>
+                      Vercel Token{' '}
+                      <span className="text-neutral-400 dark:text-zinc-500">(Optional)</span>
                     </label>
                     <a
                       href="https://vercel.com/account/tokens"

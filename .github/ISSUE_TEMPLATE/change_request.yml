@@ -1,0 +1,55 @@
+name: Feature, documentation, or maintenance request
+description: Propose a change and agree on its scope before implementation.
+title: '[Request]: '
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every contribution needs an approved issue, including documentation and maintenance changes.
+        Wait for an explicit approval comment from the maintainer before implementing the change.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - CLI
+        - Starter templates
+        - Cloud web app
+        - Documentation
+        - Tooling or maintenance
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: Explain the need and who benefits from the change.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: Describe the intended behavior, approach, and scope.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and compatibility
+      description: Include alternatives considered, breaking changes, and UI examples if relevant.
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation plan
+      description: How will you verify the change works?
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would like to implement this change after maintainer approval.
+        - label: I have searched existing issues and understand that implementation must wait for explicit maintainer approval.
+          required: true
