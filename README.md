@@ -2,13 +2,17 @@
 
 [![npm version](https://img.shields.io/npm/v/forjex?style=flat&color=8000ff)](https://www.npmjs.com/package/forjex)
 [![npm downloads](https://img.shields.io/npm/dm/forjex?style=flat&color=8000ff)](https://www.npmjs.com/package/forjex)
+[![CI](https://img.shields.io/github/actions/workflow/status/daviddozie/forjex/ci.yml?branch=main&label=CI&style=flat&color=8000ff)](https://github.com/daviddozie/forjex/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/daviddozie/forjex?style=flat&color=8000ff)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/daviddozie/forjex?style=flat&color=8000ff)](https://github.com/daviddozie/forjex/stargazers)
+[![Discussions](https://img.shields.io/badge/Discussions-Join-8000ff?style=flat)](https://github.com/daviddozie/forjex/discussions)
+[![Sponsor](https://img.shields.io/badge/Sponsor-💖-ea4aaa?style=flat)](https://myhappr.com/daviddozie)
 
 Create a project from a starter template, then connect GitHub, add CI, and deploy when you're ready.
 
 Forjex provides starters for Next.js, React, Vue, Python, Go, and Rust. You can create and run a project locally without a GitHub or Vercel account, or use the guided setup to take a new or existing project through repository creation and deployment.
 
-[Website](https://forjex-forge.vercel.app) · [Documentation](https://forjex-forge.vercel.app/docs) · [npm](https://www.npmjs.com/package/forjex) · [Report an issue](https://github.com/daviddozie/forjex/issues)
+[Website](https://forjex-forge.vercel.app) · [Documentation](https://forjex-forge.vercel.app/docs) · [Discussions](https://github.com/daviddozie/forjex/discussions) · [npm](https://www.npmjs.com/package/forjex) · [Report an issue](https://github.com/daviddozie/forjex/issues)
 
 ## Quick start
 
