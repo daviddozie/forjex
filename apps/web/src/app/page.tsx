@@ -52,12 +52,13 @@ function HeroCommand() {
   const [copyState, setCopyState] = React.useState<'idle' | 'copied' | 'error'>('idle');
 
   React.useEffect(() => {
-    if (copyState === 'idle') return;
+    if (copyState !== 'copied') return;
     const timer = window.setTimeout(() => setCopyState('idle'), 2000);
     return () => window.clearTimeout(timer);
   }, [copyState]);
 
   const handleCopy = async () => {
+    setCopyState('idle');
     try {
       await navigator.clipboard.writeText(heroCommand);
       setCopyState('copied');
@@ -99,6 +100,14 @@ function HeroCommand() {
           <TooltipContent side="top">{copyLabel}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      {copyState === 'error' && (
+        <p
+          aria-hidden="true"
+          className="px-4 pb-4 font-sans text-xs leading-relaxed text-amber-300"
+        >
+          {copyLabel}
+        </p>
+      )}
       <span role="status" className="sr-only">
         {copyState !== 'idle' ? copyLabel : ''}
       </span>
