@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
-  const response = NextResponse.json({ success: true, message: "Logged out successfully" });
+export async function POST(_request: Request) {
+  const response = NextResponse.json({ success: true, message: 'Logged out successfully' });
   clearAuthCookies(response);
   return response;
 }
@@ -15,18 +15,18 @@ export async function GET(request: Request) {
 
 function clearAuthCookies(response: NextResponse) {
   const cookiesToClear = [
-    "forjex_github_token",
-    "forjex_github_username",
-    "forjex_github_avatar",
-    "forjex_github_name",
-    "forjex_user_id",
-    "forjex_vercel_token",
+    'forjex_github_token',
+    'forjex_github_username',
+    'forjex_github_avatar',
+    'forjex_github_name',
+    'forjex_user_id',
+    'forjex_vercel_token',
   ];
 
   for (const name of cookiesToClear) {
-    response.cookies.set(name, "", {
+    response.cookies.set(name, '', {
       httpOnly: true,
-      path: "/",
+      path: '/',
       maxAge: 0,
       expires: new Date(0),
     });

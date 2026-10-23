@@ -1,0 +1,11 @@
+node_modules
+.next
+.next-dev
+dist
+coverage
+.pnpm-store
+pnpm-lock.yaml
+package-lock.json
+*.tsbuildinfo
+.env*
+drizzle

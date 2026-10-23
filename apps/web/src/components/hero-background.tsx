@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from 'react';
 
 interface Star {
   x: number;
@@ -39,28 +39,26 @@ export function HeroBackground() {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     let animationFrameId: number;
     let width = (canvas.width = canvas.parentElement?.clientWidth || window.innerWidth);
     let height = (canvas.height = canvas.parentElement?.clientHeight || 650);
 
-    // Dark mode tracking via MutationObserver
-    let isDark = document.documentElement.classList.contains("dark");
+    let isDark = document.documentElement.classList.contains('dark');
     const observer = new MutationObserver(() => {
-      isDark = document.documentElement.classList.contains("dark");
+      isDark = document.documentElement.classList.contains('dark');
     });
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ["class"],
+      attributeFilter: ['class'],
     });
 
-    // 1. Create static & twinkling stars
     const starCount = Math.min(Math.floor((width * height) / 8000), 120);
     const stars: Star[] = [];
     for (let i = 0; i < starCount; i++) {
-      const isGlint = Math.random() < 0.15; // 15% are sparkling glint stars
+      const isGlint = Math.random() < 0.15;
       stars.push({
         x: Math.random() * width,
         y: Math.random() * height * 0.9,
@@ -73,7 +71,6 @@ export function HeroBackground() {
       });
     }
 
-    // 2. Create interactive floating particles
     const particleCount = Math.min(Math.floor((width * height) / 22000), 38);
     const particles: Particle[] = [];
     for (let i = 0; i < particleCount; i++) {
@@ -89,7 +86,6 @@ export function HeroBackground() {
       });
     }
 
-    // 3. Shooting stars / Beams
     const shootingStars: ShootingStar[] = [];
     const maxShootingStars = 3;
 
@@ -98,7 +94,7 @@ export function HeroBackground() {
       y: Math.random() * (height * 0.4),
       length: Math.random() * 80 + 50,
       speed: Math.random() * 6 + 4,
-      angle: Math.PI / 4 + (Math.random() - 0.5) * 0.2, // ~45 deg downward
+      angle: Math.PI / 4 + (Math.random() - 0.5) * 0.2,
       opacity: Math.random() * 0.6 + 0.3,
       active: true,
     });
@@ -109,9 +105,8 @@ export function HeroBackground() {
       shootingStars.push(s);
     }
 
-    let nextShootTimer = 60; // frames until next shooting star
+    let nextShootTimer = 60;
 
-    // Mouse tracking for interactive effect
     const mouse = { x: -1000, y: -1000, radius: 160 };
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
@@ -123,27 +118,23 @@ export function HeroBackground() {
       mouse.y = -1000;
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseleave", handleMouseLeave);
+    window.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseleave', handleMouseLeave);
 
     const handleResize = () => {
       if (!canvas || !canvas.parentElement) return;
       width = canvas.width = canvas.parentElement.clientWidth;
       height = canvas.height = canvas.parentElement.clientHeight;
     };
-    window.addEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
 
-    // Render loop
     let tick = 0;
     const render = () => {
       tick++;
       ctx.clearRect(0, 0, width, height);
 
-      // Subtle Grid Dots in background
       const gridSize = 32;
-      ctx.fillStyle = isDark
-        ? "rgba(255, 255, 255, 0.05)"
-        : "rgba(0, 0, 0, 0.04)";
+      ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)';
       for (let x = 0; x < width; x += gridSize) {
         for (let y = 0; y < height; y += gridSize) {
           const edgeFade = 1 - y / height;
@@ -153,7 +144,6 @@ export function HeroBackground() {
         }
       }
 
-      // Draw Twinkling Stars
       for (const star of stars) {
         const twinkle = Math.sin(tick * star.twinkleSpeed + star.twinkleOffset);
         const currentAlpha = Math.max(0.1, Math.min(1, star.baseAlpha + twinkle * 0.3));
@@ -165,7 +155,6 @@ export function HeroBackground() {
         ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
         ctx.fill();
 
-        // 4-point cross sparkle for glint stars
         if (star.isGlint && currentAlpha > 0.5) {
           ctx.strokeStyle = isDark
             ? `rgba(255, 255, 255, ${currentAlpha * 0.4})`
@@ -182,7 +171,6 @@ export function HeroBackground() {
         }
       }
 
-      // Shooting stars
       nextShootTimer--;
       if (nextShootTimer <= 0) {
         const inactive = shootingStars.find((s) => !s.active);
@@ -209,10 +197,10 @@ export function HeroBackground() {
 
         const grad = ctx.createLinearGradient(tailX, tailY, s.x, s.y);
         if (isDark) {
-          grad.addColorStop(0, "rgba(255, 255, 255, 0)");
+          grad.addColorStop(0, 'rgba(255, 255, 255, 0)');
           grad.addColorStop(1, `rgba(255, 255, 255, ${s.opacity})`);
         } else {
-          grad.addColorStop(0, "rgba(15, 23, 42, 0)");
+          grad.addColorStop(0, 'rgba(15, 23, 42, 0)');
           grad.addColorStop(1, `rgba(15, 23, 42, ${s.opacity * 0.35})`);
         }
 
@@ -223,7 +211,6 @@ export function HeroBackground() {
         ctx.lineTo(s.x, s.y);
         ctx.stroke();
 
-        // Star head
         ctx.fillStyle = isDark
           ? `rgba(255, 255, 255, ${s.opacity})`
           : `rgba(15, 23, 42, ${s.opacity * 0.5})`;
@@ -232,7 +219,6 @@ export function HeroBackground() {
         ctx.fill();
       }
 
-      // Connect nearby particles with subtle lines
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const dx = particles[i].x - particles[j].x;
@@ -254,7 +240,6 @@ export function HeroBackground() {
         }
       }
 
-      // Draw floating particles
       for (const p of particles) {
         p.x += p.vx;
         p.y += p.vy;
@@ -262,7 +247,6 @@ export function HeroBackground() {
         if (p.x < 0 || p.x > width) p.vx *= -1;
         if (p.y < 0 || p.y > height) p.vy *= -1;
 
-        // Mouse interaction
         const mdx = p.x - mouse.x;
         const mdy = p.y - mouse.y;
         const mDist = Math.sqrt(mdx * mdx + mdy * mdy);
@@ -274,7 +258,6 @@ export function HeroBackground() {
           p.y += (mdy / mDist) * 0.6;
         }
 
-        // Particle core
         ctx.fillStyle = isDark
           ? `rgba(255, 255, 255, ${currentAlpha})`
           : `rgba(15, 23, 42, ${currentAlpha * 0.4})`;
@@ -282,7 +265,6 @@ export function HeroBackground() {
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Glow around larger particles
         if (p.radius > 1.6) {
           ctx.fillStyle = isDark
             ? `rgba(255, 255, 255, ${currentAlpha * 0.25})`
@@ -293,7 +275,6 @@ export function HeroBackground() {
         }
       }
 
-      // Soft mouse spotlight
       if (mouse.x > 0 && mouse.y > 0) {
         const mouseGlow = ctx.createRadialGradient(
           mouse.x,
@@ -301,14 +282,14 @@ export function HeroBackground() {
           0,
           mouse.x,
           mouse.y,
-          mouse.radius
+          mouse.radius,
         );
         if (isDark) {
-          mouseGlow.addColorStop(0, "rgba(255, 255, 255, 0.05)");
+          mouseGlow.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
         } else {
-          mouseGlow.addColorStop(0, "rgba(0, 0, 0, 0.03)");
+          mouseGlow.addColorStop(0, 'rgba(0, 0, 0, 0.03)');
         }
-        mouseGlow.addColorStop(1, "transparent");
+        mouseGlow.addColorStop(1, 'transparent');
         ctx.fillStyle = mouseGlow;
         ctx.beginPath();
         ctx.arc(mouse.x, mouse.y, mouse.radius, 0, Math.PI * 2);
@@ -323,18 +304,16 @@ export function HeroBackground() {
     return () => {
       observer.disconnect();
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseleave", handleMouseLeave);
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('resize', handleResize);
     };
   }, []);
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden -z-10 bg-white dark:bg-black transition-colors duration-300">
-      {/* 60fps Canvas with theme-aware twinkling stars, shooting stars, and floating particles */}
       <canvas ref={canvasRef} className="w-full h-full block" />
 
-      {/* Gentle bottom gradient fade into page background */}
       <div className="absolute bottom-0 inset-x-0 h-24 bg-gradient-to-t from-white dark:from-black to-transparent pointer-events-none transition-colors duration-300" />
     </div>
   );

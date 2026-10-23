@@ -13,7 +13,6 @@ export class CICDGenerator {
     const spinner = logger.spinner('⚙️  Generating CI/CD pipeline...');
 
     try {
-      // Create .github/workflows directory
       if (!existsSync('.github')) {
         mkdirSync('.github');
       }
@@ -21,7 +20,6 @@ export class CICDGenerator {
         mkdirSync('.github/workflows');
       }
 
-      // Generate appropriate workflow based on project type
       let workflowContent = '';
 
       switch (this.config.type) {
@@ -41,7 +39,6 @@ export class CICDGenerator {
           throw new Error('Unknown project type');
       }
 
-      // Write workflow file
       writeFileSync('.github/workflows/ci.yml', workflowContent);
       spinner.succeed('CI/CD pipeline created: .github/workflows/ci.yml');
     } catch (error: any) {
@@ -56,10 +53,8 @@ export class CICDGenerator {
         const packageJson = JSON.parse(readFileSync('package.json', 'utf-8'));
         const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
 
-        // Check for Next.js - requires Node 20+
         if (deps['next']) {
           const nextVersion = deps['next'];
-          // Next.js 14+ requires Node 20+
           if (nextVersion.includes('14') || nextVersion.includes('15')) {
             return '[20.x, 22.x]';
           }
@@ -75,9 +70,7 @@ export class CICDGenerator {
           }
         }
       }
-    } catch (error) {
-      // Default fallback
-    }
+    } catch {}
 
     return '[20.x, 22.x]';
   }
@@ -85,10 +78,7 @@ export class CICDGenerator {
   private generateNodeWorkflow(): string {
     const { packageManager, hasTests, buildCommand, testCommand } = this.config;
 
-    // Only enable cache if lock file exists
-    const cacheConfig = this.hasLockFile(packageManager!)
-      ? `cache: '${packageManager}'`
-      : '';
+    const cacheConfig = this.hasLockFile(packageManager!) ? `cache: '${packageManager}'` : '';
 
     const hasBuildScript = this.hasBuildScript();
 
@@ -117,8 +107,12 @@ jobs:
     - name: 🔧 Setup Node.js $\{{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
-        node-version: $\{{ matrix.node-version }}${cacheConfig ? `
-        ${cacheConfig}` : ''}
+        node-version: $\{{ matrix.node-version }}${
+          cacheConfig
+            ? `
+        ${cacheConfig}`
+            : ''
+        }
 
     - name: 📥 Install dependencies
       run: ${this.getInstallCommand(packageManager!)}
@@ -126,12 +120,20 @@ jobs:
     - name: 🔍 Lint code
       run: ${packageManager} run lint || echo "No lint script found"
       continue-on-error: true
-${hasTests ? `
+${
+  hasTests
+    ? `
     - name: 🧪 Run tests
       run: ${testCommand}
-` : ''}${hasBuildScript ? `
+`
+    : ''
+}${
+      hasBuildScript
+        ? `
     - name: 🏗️  Build project
-      run: ${buildCommand}` : ''}
+      run: ${buildCommand}`
+        : ''
+    }
 `;
   }
 
@@ -173,10 +175,14 @@ jobs:
         pip install flake8
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
       continue-on-error: true
-${hasTests ? `
+${
+  hasTests
+    ? `
     - name: 🧪 Run tests
       run: ${testCommand}
-` : ''}`;
+`
+    : ''
+}`;
   }
 
   private generateGoWorkflow(): string {
@@ -215,10 +221,14 @@ jobs:
         go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
         golangci-lint run
       continue-on-error: true
-${hasTests ? `
+${
+  hasTests
+    ? `
     - name: 🧪 Run tests
       run: go test ./... -v
-` : ''}
+`
+    : ''
+}
     - name: 🏗️  Build project
       run: go build -v ./...
 `;
@@ -270,7 +280,7 @@ jobs:
       npm: 'package-lock.json',
       yarn: 'yarn.lock',
       pnpm: 'pnpm-lock.yaml',
-      bun: 'bun.lockb'
+      bun: 'bun.lockb',
     };
 
     const lockFile = lockFiles[packageManager];
@@ -291,7 +301,7 @@ jobs:
       npm: 'npm install',
       yarn: 'yarn install --frozen-lockfile',
       pnpm: 'pnpm install --frozen-lockfile',
-      bun: 'bun install --frozen-lockfile'
+      bun: 'bun install --frozen-lockfile',
     };
     return commands[packageManager] || 'npm ci';
   }

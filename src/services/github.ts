@@ -7,137 +7,134 @@ import { saveConfig, loadConfig, isTokenValid } from '../utils/config.js';
 import type { RepoOptions } from '../types/index.js';
 
 const CLIENT_ID = 'Ov23liRqj5mMaAS6fFiP';
-const API_TRACK_URL = "https://forjex.vercel.app/api/track";
+const API_TRACK_URL = 'https://forjex.vercel.app/api/track';
 
 export class GitHubService {
-    private octokit: Octokit | null = null;
+  private octokit: Octokit | null = null;
 
-    async authenticate(): Promise<void> {
-        const config = loadConfig();
+  async authenticate(): Promise<void> {
+    const config = loadConfig();
 
-        if (config && isTokenValid(config)) {
-            this.octokit = new Octokit({ auth: config.githubToken || config.token });
-            logger.success('🔑 Already authenticated with GitHub');
-            return;
-        }
-
-        const spinner = logger.spinner('⏳ Authenticating with GitHub...');
-
-        try {
-            const auth = createOAuthDeviceAuth({
-                clientType: 'oauth-app',
-                clientId: CLIENT_ID,
-                scopes: ['repo', 'workflow', 'user:email'],
-                onVerification: async (verification) => {
-                    spinner.stop();
-                    console.log('\n');
-                    logger.info(`Please open: ${chalk.cyan(verification.verification_uri)}`);
-                    logger.info(`Enter code: ${chalk.bold.yellow(verification.user_code)}`);
-                    console.log('\n');
-
-                    await open(verification.verification_uri);
-                    spinner.start('⏳ Waiting for authorization...');
-                }
-            });
-
-            const { token } = await auth({ type: 'oauth' });
-
-            this.octokit = new Octokit({ auth: token });
-
-            // Fetch user data
-            const { data: user } = await this.octokit.users.getAuthenticated();
-
-            // Save to local config
-            saveConfig({
-                ...loadConfig(),
-                githubToken: token,
-                token,
-                expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000),
-                user: {
-                    name: user.name || user.login,
-                    username: user.login,
-                    avatar: user.avatar_url,
-                    profileUrl: user.html_url
-                }
-            });
-
-            // Send to web API
-            await this.sendUserToAPI(user);
-
-            spinner.succeed('✅ Authentication successful!');
-        } catch (error) {
-            spinner.fail('Authentication failed');
-            throw error;
-        }
+    if (config && isTokenValid(config)) {
+      this.octokit = new Octokit({ auth: config.githubToken || config.token });
+      logger.success('🔑 Already authenticated with GitHub');
+      return;
     }
 
-    private async sendUserToAPI(user: any): Promise<void> {
-        try {
-            console.log('🔄 Sending user info to dashboard:', API_TRACK_URL);
+    const spinner = logger.spinner('⏳ Authenticating with GitHub...');
 
-            const payload = {
-                username: user.login,
-                email: user.email || null,
-                os: { type: "github-auth" },
-                avatar: user.avatar_url,
-                command: "auth",
-                timestamp: new Date().toISOString(),
-            };
+    try {
+      const auth = createOAuthDeviceAuth({
+        clientType: 'oauth-app',
+        clientId: CLIENT_ID,
+        scopes: ['repo', 'workflow', 'user:email'],
+        onVerification: async (verification) => {
+          spinner.stop();
+          console.log('\n');
+          logger.info(`Please open: ${chalk.cyan(verification.verification_uri)}`);
+          logger.info(`Enter code: ${chalk.bold.yellow(verification.user_code)}`);
+          console.log('\n');
 
-            const response = await fetch(API_TRACK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+          await open(verification.verification_uri);
+          spinner.start('⏳ Waiting for authorization...');
+        },
+      });
 
-            if (!response.ok) {
-                const text = await response.text();
-                console.error('❌ Dashboard API Error:', response.status, text);
-                return;
-            }
+      const { token } = await auth({ type: 'oauth' });
 
-            console.log('✅ User synced successfully');
-        } catch (err: any) {
-            console.error('❌ Failed to sync user:', err.message);
-        }
+      this.octokit = new Octokit({ auth: token });
+
+      const { data: user } = await this.octokit.users.getAuthenticated();
+
+      saveConfig({
+        ...loadConfig(),
+        githubToken: token,
+        token,
+        expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+        user: {
+          name: user.name || user.login,
+          username: user.login,
+          avatar: user.avatar_url,
+          profileUrl: user.html_url,
+        },
+      });
+
+      await this.sendUserToAPI(user);
+
+      spinner.succeed('✅ Authentication successful!');
+    } catch (error) {
+      spinner.fail('Authentication failed');
+      throw error;
     }
+  }
 
-    async createRepository(options: RepoOptions): Promise<string> {
-        if (!this.octokit) throw new Error('Not authenticated');
+  private async sendUserToAPI(user: any): Promise<void> {
+    try {
+      console.log('🔄 Sending user info to dashboard:', API_TRACK_URL);
 
-        const spinner = logger.spinner(`Creating repository: ${options.name}`);
+      const payload = {
+        username: user.login,
+        email: user.email || null,
+        os: { type: 'github-auth' },
+        avatar: user.avatar_url,
+        command: 'auth',
+        timestamp: new Date().toISOString(),
+      };
 
-        try {
-            const { data } = await this.octokit.repos.createForAuthenticatedUser({
-                name: options.name,
-                description: options.description,
-                private: options.isPrivate,
-                auto_init: false,
-            });
+      const response = await fetch(API_TRACK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-            spinner.succeed(`Repository created: ${data.html_url}`);
-            return data.clone_url;
-        } catch (error: any) {
-            spinner.fail('Failed to create repository');
-            if (error.status === 422) {
-                throw new Error('Repository name already exists');
-            }
-            throw error;
-        }
+      if (!response.ok) {
+        const text = await response.text();
+        console.error('❌ Dashboard API Error:', response.status, text);
+        return;
+      }
+
+      console.log('✅ User synced successfully');
+    } catch (err: any) {
+      console.error('❌ Failed to sync user:', err.message);
     }
+  }
 
-    async getUserInfo(): Promise<{ login: string; name: string | null }> {
-        if (!this.octokit) throw new Error('Not authenticated');
+  async createRepository(options: RepoOptions): Promise<string> {
+    if (!this.octokit) throw new Error('Not authenticated');
 
-        const { data } = await this.octokit.users.getAuthenticated();
-        return {
-            login: data.login,
-            name: data.name
-        };
+    const spinner = logger.spinner(`Creating repository: ${options.name}`);
+
+    try {
+      const { data } = await this.octokit.repos.createForAuthenticatedUser({
+        name: options.name,
+        description: options.description,
+        private: options.isPrivate,
+        auto_init: false,
+      });
+
+      spinner.succeed(`Repository created: ${data.html_url}`);
+      return data.clone_url;
+    } catch (error: any) {
+      spinner.fail('Failed to create repository');
+      if (error.status === 422) {
+        throw new Error('Repository name already exists');
+      }
+      throw error;
     }
+  }
 
-    getToken(): string | null {
-        const config = loadConfig();
-        return config?.token || null;
-    }
+  async getUserInfo(): Promise<{ login: string; name: string | null }> {
+    if (!this.octokit) throw new Error('Not authenticated');
+
+    const { data } = await this.octokit.users.getAuthenticated();
+    return {
+      login: data.login,
+      name: data.name,
+    };
+  }
+
+  getToken(): string | null {
+    const config = loadConfig();
+    return config?.token || null;
+  }
 }

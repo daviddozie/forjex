@@ -1,19 +1,17 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import Link from "next/link";
+import * as React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import {
-  Flame,
   Plus,
   ExternalLink,
   Triangle,
   GitBranch,
   Clock,
   CheckCircle2,
-  Terminal,
   Activity,
   ArrowUpRight,
-  Key,
   Shield,
   Sparkles,
   MoreVertical,
@@ -23,13 +21,12 @@ import {
   RefreshCw,
   LogIn,
   FolderGit2,
-  Loader2,
   AlertTriangle,
-} from "lucide-react";
-import { GithubIcon, VercelIcon } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+} from 'lucide-react';
+import { GithubIcon } from '@/components/ui/icons';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -37,16 +34,11 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
-import { CredentialsModal } from "@/components/credentials-modal";
-import { AuthModal } from "@/components/auth/auth-modal";
-import { Skeleton } from "@/components/ui/skeleton";
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
+import { CredentialsModal } from '@/components/credentials-modal';
+import { AuthModal } from '@/components/auth/auth-modal';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ProjectRecord {
   id: string;
@@ -89,7 +81,7 @@ export default function DashboardPage() {
 
   const checkAuth = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me");
+      const res = await fetch('/api/auth/me');
       if (res.ok) {
         const data = await res.json();
         if (data.authenticated && data.user) {
@@ -107,7 +99,7 @@ export default function DashboardPage() {
 
   const checkDbHealth = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/health/db");
+      const res = await fetch('/api/health/db');
       if (res.ok) {
         const data = await res.json();
         setDbStatus({
@@ -115,15 +107,13 @@ export default function DashboardPage() {
           latency: data.latencyMs,
         });
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
   }, []);
 
   const loadProjects = React.useCallback(async (autoPrune = false) => {
     setIsRefreshing(true);
     try {
-      const res = await fetch(`/api/projects${autoPrune ? "?prune=true" : ""}`);
+      const res = await fetch(`/api/projects${autoPrune ? '?prune=true' : ''}`);
       if (res.ok) {
         const data = await res.json();
         if (data.authenticated && Array.isArray(data.projects)) {
@@ -133,9 +123,7 @@ export default function DashboardPage() {
           return;
         }
       }
-    } catch {
-      // ignore
-    }
+    } catch {}
     setProjects([]);
     setIsRefreshing(false);
     setLoading(false);
@@ -149,32 +137,30 @@ export default function DashboardPage() {
 
   const handleRemoveProject = async (id: string) => {
     try {
-      const response = await fetch(`/api/projects?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      if (!response.ok) throw new Error("Could not remove project");
+      const response = await fetch(`/api/projects?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Could not remove project');
     } catch {
       return;
     }
     setProjects((prev) => prev.filter((p) => p.id !== id));
     try {
-      const stored = JSON.parse(
-        localStorage.getItem("forjex_user_projects") || "[]"
-      );
+      const stored = JSON.parse(localStorage.getItem('forjex_user_projects') || '[]');
       localStorage.setItem(
-        "forjex_user_projects",
-        JSON.stringify(stored.filter((p: any) => p.id !== id && p.name !== id))
+        'forjex_user_projects',
+        JSON.stringify(stored.filter((p: any) => p.id !== id && p.name !== id)),
       );
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const handlePruneDeleted = async () => {
     setIsPruning(true);
     try {
-      await fetch("/api/projects?pruneDeleted=true", { method: "DELETE" });
+      await fetch('/api/projects?pruneDeleted=true', { method: 'DELETE' });
       await loadProjects();
     } catch (e) {
-      console.error("Prune error:", e);
+      console.error('Prune error:', e);
     } finally {
       setIsPruning(false);
     }
@@ -197,7 +183,6 @@ export default function DashboardPage() {
   return (
     <TooltipProvider>
       <div className="w-full px-4 sm:px-8 lg:px-12 py-10 flex-1 space-y-8">
-        {/* Top Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-200 dark:border-neutral-800 pb-6">
           <div>
             <div className="flex items-center gap-2">
@@ -205,13 +190,13 @@ export default function DashboardPage() {
                 Projects Dashboard
               </h1>
               <Badge variant="success" className="text-[10px]">
-                {dbStatus.connected ? "Cloud Connected" : "Cloud Unavailable"}
+                {dbStatus.connected ? 'Cloud Connected' : 'Cloud Unavailable'}
               </Badge>
             </div>
             <p className="text-xs text-neutral-500 mt-1">
               {currentUser
                 ? `Logged in as @${currentUser.username}. Synced with your personal cloud workspace.`
-                : "Manage your automated repositories, CI/CD statuses, and edge deployments."}
+                : 'Manage your automated repositories, CI/CD statuses, and edge deployments.'}
             </p>
           </div>
 
@@ -222,7 +207,10 @@ export default function DashboardPage() {
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/5 text-xs font-mono text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
               >
                 {currentUser.avatarUrl ? (
-                  <img
+                  <Image
+                    width={14}
+                    height={14}
+                    unoptimized
                     src={currentUser.avatarUrl}
                     alt={currentUser.username}
                     className="w-3.5 h-3.5 rounded-full object-cover"
@@ -255,9 +243,7 @@ export default function DashboardPage() {
         </div>
 
         {loading ? (
-          /* Full-width Skeleton Loader */
           <div className="space-y-8 w-full animate-in fade-in-50 duration-300">
-            {/* Metric Cards Skeleton */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {[1, 2, 3, 4].map((i) => (
                 <div
@@ -271,7 +257,6 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* Projects List Skeleton */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Skeleton className="h-4 w-32 bg-neutral-200 dark:bg-neutral-800/60" />
@@ -305,9 +290,7 @@ export default function DashboardPage() {
             </div>
           </div>
         ) : !currentUser ? (
-          /* Full Width Guest / Unauthenticated Prompt */
           <div className="w-full rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-950/70 p-8 sm:p-14 text-center space-y-8 backdrop-blur-xl relative overflow-hidden shadow-lg dark:shadow-2xl transition-colors">
-            {/* Subtle background glow */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-neutral-300/30 dark:bg-zinc-800/15 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative z-10 space-y-4 max-w-2xl mx-auto">
@@ -319,7 +302,8 @@ export default function DashboardPage() {
                   Multi-Tenant Cloud Workspace
                 </h2>
                 <p className="text-sm text-neutral-600 dark:text-neutral-400 max-w-xl mx-auto leading-relaxed">
-                  Sign in to view your personalized repositories, monitor live Vercel deployments, and trigger automated CI/CD pipelines across the CLI and Web.
+                  Sign in to view your personalized repositories, monitor live Vercel deployments,
+                  and trigger automated CI/CD pipelines across the CLI and Web.
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
@@ -341,7 +325,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Feature Highlights Grid filling full width */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6 border-t border-neutral-200 dark:border-neutral-800/60 relative z-10 text-left">
               <div className="p-4 rounded-xl bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800/60 space-y-1.5 shadow-xs">
                 <div className="flex items-center gap-2 text-neutral-900 dark:text-white text-xs font-semibold">
@@ -349,7 +332,8 @@ export default function DashboardPage() {
                   <span>Isolated Repositories</span>
                 </div>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  Each developer’s repositories and builds remain completely isolated and scoped to your profile.
+                  Each developer’s repositories and builds remain completely isolated and scoped to
+                  your profile.
                 </p>
               </div>
               <div className="p-4 rounded-xl bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800/60 space-y-1.5 shadow-xs">
@@ -358,7 +342,8 @@ export default function DashboardPage() {
                   <span>Automated CI/CD Matrices</span>
                 </div>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  Every scaffolded project includes GitHub Actions workflows for continuous linting and testing.
+                  Every scaffolded project includes GitHub Actions workflows for continuous linting
+                  and testing.
                 </p>
               </div>
               <div className="p-4 rounded-xl bg-white dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800/60 space-y-1.5 shadow-xs">
@@ -367,15 +352,14 @@ export default function DashboardPage() {
                   <span>Edge Vercel Deployments</span>
                 </div>
                 <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">
-                  Instant live preview deployments with production DNS and edge network routing out of the box.
+                  Instant live preview deployments with production DNS and edge network routing out
+                  of the box.
                 </p>
               </div>
             </div>
           </div>
         ) : (
-          /* Authenticated Dashboard View */
           <>
-            {/* Metrics Row with Shadcn Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="p-4 space-y-1">
                 <span className="text-xs text-neutral-500 font-medium">Your Forged Repos</span>
@@ -391,11 +375,7 @@ export default function DashboardPage() {
               <Card className="p-4 space-y-1">
                 <span className="text-xs text-neutral-500 font-medium">Live Deployments</span>
                 <div className="text-2xl font-bold text-neutral-900 dark:text-white">
-                  {
-                    projects.filter(
-                      (p) => p.repoExists !== false && p.deploymentUrl
-                    ).length
-                  }
+                  {projects.filter((p) => p.repoExists !== false && p.deploymentUrl).length}
                 </div>
                 <div className="text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1">
                   <Triangle className="w-3 h-3 fill-current" />
@@ -425,7 +405,6 @@ export default function DashboardPage() {
               </Card>
             </div>
 
-            {/* Projects List with Shadcn DropdownMenu & Tooltips */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -444,30 +423,28 @@ export default function DashboardPage() {
                     className="text-xs text-neutral-500 hover:text-neutral-900 dark:hover:text-white flex items-center gap-1 cursor-pointer transition-colors"
                     title="Refresh projects"
                   >
-                    <RefreshCw
-                      className={`w-3 h-3 ${isRefreshing ? "animate-spin" : ""}`}
-                    />
+                    <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
                     <span className="hidden sm:inline">Refresh</span>
                   </button>
                   <span className="text-xs text-neutral-500 font-mono">
-                    {projects.length} {projects.length === 1 ? "repository" : "repositories"}
+                    {projects.length} {projects.length === 1 ? 'repository' : 'repositories'}
                   </span>
                 </div>
               </div>
 
-              {/* Alert banner if any repositories are detected as deleted on GitHub */}
               {projects.some((p) => p.repoExists === false) && (
                 <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs text-amber-700 dark:text-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in-50">
                   <div className="flex items-center gap-2.5">
                     <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
                     <div>
                       <span className="font-semibold text-amber-400">
-                        {projects.filter((p) => p.repoExists === false).length} repository deleted on GitHub:{" "}
+                        {projects.filter((p) => p.repoExists === false).length} repository deleted
+                        on GitHub:{' '}
                         <span className="font-mono">
                           {projects
                             .filter((p) => p.repoExists === false)
                             .map((p) => p.repo)
-                            .join(", ")}
+                            .join(', ')}
                         </span>
                       </span>
                       <span className="text-neutral-400 block sm:inline sm:ml-1.5 text-[11px]">
@@ -484,7 +461,7 @@ export default function DashboardPage() {
                       className="text-xs h-7 gap-1.5 border-amber-500/40 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" />
-                      <span>{isPruning ? "Cleaning..." : "Clean Up Stale Records"}</span>
+                      <span>{isPruning ? 'Cleaning...' : 'Clean Up Stale Records'}</span>
                     </Button>
                   </div>
                 </div>
@@ -494,9 +471,12 @@ export default function DashboardPage() {
                 <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-950/40 p-10 text-center space-y-3">
                   <FolderGit2 className="w-8 h-8 text-neutral-400 dark:text-neutral-600 mx-auto" />
                   <div className="space-y-1">
-                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">No projects found</h3>
+                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      No projects found
+                    </h3>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-sm mx-auto">
-                      You haven&apos;t forged any projects with this account yet. Scaffold your first production repository now.
+                      You haven&apos;t forged any projects with this account yet. Scaffold your
+                      first production repository now.
                     </p>
                   </div>
                   <Link href="/forge">
@@ -512,7 +492,7 @@ export default function DashboardPage() {
                     <div
                       key={proj.id}
                       className={`p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-neutral-100/50 dark:hover:bg-neutral-900/30 transition-colors ${
-                        proj.repoExists === false ? "opacity-75 bg-neutral-500/5" : ""
+                        proj.repoExists === false ? 'opacity-75 bg-neutral-500/5' : ''
                       }`}
                     >
                       <div className="space-y-1">
@@ -520,8 +500,8 @@ export default function DashboardPage() {
                           <span
                             className={`font-semibold text-sm ${
                               proj.repoExists === false
-                                ? "line-through text-neutral-500"
-                                : "text-neutral-900 dark:text-white"
+                                ? 'line-through text-neutral-500'
+                                : 'text-neutral-900 dark:text-white'
                             }`}
                           >
                             {proj.name}
@@ -549,11 +529,13 @@ export default function DashboardPage() {
                           )}
                         </div>
 
-                        <p className="text-[11px] text-neutral-500">Deployment: {proj.status.replaceAll("_", " ")}</p>
+                        <p className="text-[11px] text-neutral-500">
+                          Deployment: {proj.status.replaceAll('_', ' ')}
+                        </p>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-neutral-500 font-mono">
                           <span className="flex items-center gap-1">
                             <GithubIcon className="w-3 h-3" />
-                            <span className={proj.repoExists === false ? "line-through" : ""}>
+                            <span className={proj.repoExists === false ? 'line-through' : ''}>
                               {proj.repo}
                             </span>
                           </span>
@@ -600,27 +582,22 @@ export default function DashboardPage() {
                               <TooltipContent>View repository on GitHub</TooltipContent>
                             </Tooltip>
 
-                            {proj.deploymentUrl && proj.status === "ready" && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <a
-                                  href={proj.deploymentUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  <Button size="sm" className="gap-1.5 text-xs">
-                                    <span>Visit Live</span>
-                                    <ArrowUpRight className="w-3 h-3" />
-                                  </Button>
-                                </a>
-                              </TooltipTrigger>
-                              <TooltipContent>Open live deployment</TooltipContent>
-                            </Tooltip>
+                            {proj.deploymentUrl && proj.status === 'ready' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <a href={proj.deploymentUrl} target="_blank" rel="noreferrer">
+                                    <Button size="sm" className="gap-1.5 text-xs">
+                                      <span>Visit Live</span>
+                                      <ArrowUpRight className="w-3 h-3" />
+                                    </Button>
+                                  </a>
+                                </TooltipTrigger>
+                                <TooltipContent>Open live deployment</TooltipContent>
+                              </Tooltip>
                             )}
                           </>
                         )}
 
-                        {/* Dropdown Menu for Project Actions */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-8 w-8 p-0">
@@ -630,15 +607,13 @@ export default function DashboardPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-48">
                             <DropdownMenuLabel>Project Actions</DropdownMenuLabel>
-                            <DropdownMenuItem
-                              onClick={() => handleCopyClone(proj.repo, proj.id)}
-                            >
+                            <DropdownMenuItem onClick={() => handleCopyClone(proj.repo, proj.id)}>
                               {copiedId === proj.id ? (
                                 <Check className="w-3.5 h-3.5 text-emerald-500" />
                               ) : (
                                 <Copy className="w-3.5 h-3.5" />
                               )}
-                              <span>{copiedId === proj.id ? "Copied!" : "Copy Clone Command"}</span>
+                              <span>{copiedId === proj.id ? 'Copied!' : 'Copy Clone Command'}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <a
@@ -651,18 +626,18 @@ export default function DashboardPage() {
                                 <span>View on GitHub</span>
                               </a>
                             </DropdownMenuItem>
-                            {proj.deploymentUrl && proj.status === "ready" && (
-                            <DropdownMenuItem asChild>
-                              <a
-                                href={proj.deploymentUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="flex items-center gap-2"
-                              >
-                                <Triangle className="w-3 h-3 fill-current" />
-                                <span>Visit Deployment</span>
-                              </a>
-                            </DropdownMenuItem>
+                            {proj.deploymentUrl && proj.status === 'ready' && (
+                              <DropdownMenuItem asChild>
+                                <a
+                                  href={proj.deploymentUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-center gap-2"
+                                >
+                                  <Triangle className="w-3 h-3 fill-current" />
+                                  <span>Visit Deployment</span>
+                                </a>
+                              </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -683,7 +658,6 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* Credentials Modal */}
         <CredentialsModal
           isOpen={credentialsOpen}
           onClose={() => setCredentialsOpen(false)}
@@ -693,7 +667,6 @@ export default function DashboardPage() {
           }}
         />
 
-        {/* Auth Modal */}
         <AuthModal
           isOpen={authModalOpen}
           onClose={() => setAuthModalOpen(false)}

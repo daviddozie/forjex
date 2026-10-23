@@ -1,22 +1,20 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "next-themes";
+import { ForjexIcon } from '@/components/ui/forjex-icon';
+import * as React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from 'next-themes';
 import {
-  Flame,
   User,
   GitBranch,
   Terminal,
   LayoutDashboard,
-  Radio,
   CheckCircle2,
   Activity,
   Layers,
-  Sparkles,
-} from "lucide-react";
-import { GithubIcon, VercelIcon } from "@/components/ui/icons";
-import { Badge } from "@/components/ui/badge";
+} from 'lucide-react';
+import { GithubIcon, VercelIcon } from '@/components/ui/icons';
+import { Badge } from '@/components/ui/badge';
 
 interface OrbitNode {
   id: string;
@@ -33,89 +31,88 @@ interface OrbitNode {
 
 const FORJEX_NODES: OrbitNode[] = [
   {
-    id: "developer",
-    label: "Developer",
+    id: 'developer',
+    label: 'Developer',
     icon: User,
     offsetX: -290,
     offsetY: -120,
-    role: "Identity Layer",
-    detail: "Multi-tenant auth, workspace & PAT credentials",
-    status: "Authenticated",
+    role: 'Identity Layer',
+    detail: 'Multi-tenant auth, workspace & PAT credentials',
+    status: 'Authenticated',
     duration: 5.4,
     delay: 0,
   },
   {
-    id: "dual-cli",
-    label: "Dual-Mode CLI",
+    id: 'dual-cli',
+    label: 'Dual-Mode CLI',
     icon: Terminal,
     offsetX: -600,
     offsetY: -25,
-    role: "Terminal Engine",
+    role: 'Terminal Engine',
     detail: "Local terminal scaffolding with 'forjex forge'",
-    status: "Ready",
+    status: 'Ready',
     duration: 5.8,
     delay: 1.1,
   },
   {
-    id: "github-repo",
-    label: "GitHub Repo",
+    id: 'github-repo',
+    label: 'GitHub Repo',
     icon: GithubIcon,
     offsetX: -390,
     offsetY: 150,
-    role: "Repository Layer",
-    detail: "Automated remote repo provisioning & branch tracking",
-    status: "Git Synced",
+    role: 'Repository Layer',
+    detail: 'Automated remote repo provisioning & branch tracking',
+    status: 'Git Synced',
     duration: 5.0,
     delay: 2.2,
   },
 
-  // ── TOP CENTER (Frameworks & Stacks) ──────────────────────────
   {
-    id: "fullstack-stacks",
-    label: "Fullstack Stacks",
+    id: 'fullstack-stacks',
+    label: 'Fullstack Stacks',
     icon: Layers,
     offsetX: -70,
     offsetY: -210,
-    role: "Framework Presets",
-    detail: "Production templates: Next.js 15, FastAPI, Go Fiber",
-    status: "Verified",
+    role: 'Framework Presets',
+    detail: 'Production templates: Next.js 15, FastAPI, Go Fiber',
+    status: 'Verified',
     duration: 4.8,
     delay: 0.8,
   },
 
   {
-    id: "vercel-deploy",
-    label: "Vercel Deploy",
+    id: 'vercel-deploy',
+    label: 'Vercel Deploy',
     icon: VercelIcon,
     offsetX: 290,
     offsetY: -120,
-    role: "Hosting Layer",
-    detail: "Zero-config edge deployment, SSL & preview URLs",
-    status: "Edge Active",
+    role: 'Hosting Layer',
+    detail: 'Zero-config edge deployment, SSL & preview URLs',
+    status: 'Edge Active',
     duration: 5.6,
     delay: 0.5,
   },
   {
-    id: "cloud-dashboard",
-    label: "Cloud Dashboard",
+    id: 'cloud-dashboard',
+    label: 'Cloud Dashboard',
     icon: LayoutDashboard,
     offsetX: 400,
     offsetY: -30,
-    role: "Control Plane",
-    detail: "Real-time web monitoring & repository management",
-    status: "Live Console",
+    role: 'Control Plane',
+    detail: 'Real-time web monitoring & repository management',
+    status: 'Live Console',
     duration: 6.0,
     delay: 1.6,
   },
   {
-    id: "cicd-pipeline",
-    label: "CI/CD Pipeline",
+    id: 'cicd-pipeline',
+    label: 'CI/CD Pipeline',
     icon: GitBranch,
     offsetX: 380,
     offsetY: 150,
-    role: "Automation Layer",
-    detail: "Automated GitHub Actions lint, test & build checks",
-    status: "Passing",
+    role: 'Automation Layer',
+    detail: 'Automated GitHub Actions lint, test & build checks',
+    status: 'Passing',
     duration: 4.6,
     delay: 1.9,
   },
@@ -137,14 +134,13 @@ export function PipelineAnimation() {
     return () => clearInterval(interval);
   }, []);
 
-  const isDark = mounted ? resolvedTheme === "dark" : true;
+  const isDark = mounted ? resolvedTheme === 'dark' : true;
 
   return (
     <div className="w-full relative overflow-hidden">
       <div className="relative w-full border-y border-neutral-200 dark:border-white/[0.08] bg-neutral-50/80 dark:bg-black shadow-lg dark:shadow-2xl overflow-hidden backdrop-blur-2xl transition-colors duration-300">
         <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-neutral-300 dark:via-white/25 to-transparent z-40" />
 
-        {/* Section Header Bar */}
         <div className="relative z-30 border-b border-neutral-200 dark:border-white/[0.06] bg-white/70 dark:bg-neutral-950/70 backdrop-blur-md transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -154,14 +150,16 @@ export function PipelineAnimation() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Badge variant="outline" className="text-[10px] font-mono border-neutral-300 dark:border-white/10 text-neutral-600 dark:text-neutral-400 bg-neutral-100/80 dark:bg-transparent hidden sm:inline-flex">
-                Forjex Cloud Mesh
+              <Badge
+                variant="outline"
+                className="text-[10px] font-mono border-neutral-300 dark:border-white/10 text-neutral-600 dark:text-neutral-400 bg-neutral-100/80 dark:bg-transparent hidden sm:inline-flex"
+              >
+                Forjex Mesh
               </Badge>
             </div>
           </div>
         </div>
 
-        {/* Radar Concentric Orbital Stage with Balanced Spacing */}
         <div className="relative w-full h-[540px] sm:h-[620px] flex items-center justify-center overflow-hidden bg-neutral-100/60 dark:bg-black select-none transition-colors duration-300">
           <div className="absolute inset-y-0 left-0 w-10 sm:w-16 md:w-20 bg-gradient-to-r from-neutral-100 dark:from-black via-neutral-100/60 dark:via-black/60 to-transparent z-30 pointer-events-none backdrop-blur-[1.5px]" />
           <div className="absolute inset-y-0 right-0 w-10 sm:w-16 md:w-20 bg-gradient-to-l from-neutral-100 dark:from-black via-neutral-100/60 dark:via-black/60 to-transparent z-30 pointer-events-none backdrop-blur-[1.5px]" />
@@ -172,30 +170,27 @@ export function PipelineAnimation() {
             className="absolute w-[900px] h-[900px] rounded-full pointer-events-none opacity-40 animate-[spin_18s_linear_infinite]"
             style={{
               background: isDark
-                ? "conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0.05) 0deg, rgba(255,255,255,0.01) 25deg, transparent 50deg, transparent 360deg)"
-                : "conic-gradient(from 0deg at 50% 50%, rgba(0,0,0,0.04) 0deg, rgba(0,0,0,0.01) 25deg, transparent 50deg, transparent 360deg)",
+                ? 'conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0.05) 0deg, rgba(255,255,255,0.01) 25deg, transparent 50deg, transparent 360deg)'
+                : 'conic-gradient(from 0deg at 50% 50%, rgba(0,0,0,0.04) 0deg, rgba(0,0,0,0.01) 25deg, transparent 50deg, transparent 360deg)',
             }}
           />
 
-          {/* Radiating Sonar Wave Pulses */}
           <motion.div
             key={`pulse-1-${pulseCount}`}
             initial={{ scale: 0.25, opacity: 0.55 }}
             animate={{ scale: 2.8, opacity: 0 }}
-            transition={{ duration: 4.8, ease: "easeOut" }}
+            transition={{ duration: 4.8, ease: 'easeOut' }}
             className="absolute w-72 h-72 rounded-full border border-neutral-300 dark:border-white/[0.08] pointer-events-none"
           />
           <motion.div
             key={`pulse-2-${pulseCount}`}
             initial={{ scale: 0.25, opacity: 0.4 }}
             animate={{ scale: 3.2, opacity: 0 }}
-            transition={{ duration: 5.8, delay: 1.6, ease: "easeOut" }}
+            transition={{ duration: 5.8, delay: 1.6, ease: 'easeOut' }}
             className="absolute w-72 h-72 rounded-full border border-neutral-300/60 dark:border-white/[0.05] pointer-events-none"
           />
 
-          {/* Scalable Container for rings and badges */}
           <div className="relative w-full h-full flex items-center justify-center scale-[0.68] xs:scale-[0.78] sm:scale-[0.90] md:scale-100 transition-transform">
-            {/* Concentric Orbital Rings */}
             {CONCENTRIC_RINGS.map((size) => (
               <div
                 key={size}
@@ -207,16 +202,14 @@ export function PipelineAnimation() {
               />
             ))}
 
-            {/* SVG Connecting Ray Lines & Flowing Data Packets */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ overflow: "visible" }}
+              style={{ overflow: 'visible' }}
             >
               {FORJEX_NODES.map((node) => {
                 const isHovered = hoveredNode?.id === node.id;
                 return (
                   <g key={`beam-${node.id}`}>
-                    {/* Connecting Dotted Beam */}
                     <line
                       x1="50%"
                       y1="50%"
@@ -225,21 +218,20 @@ export function PipelineAnimation() {
                       stroke={
                         isHovered
                           ? isDark
-                            ? "rgba(255, 255, 255, 0.45)"
-                            : "rgba(0, 0, 0, 0.45)"
+                            ? 'rgba(255, 255, 255, 0.45)'
+                            : 'rgba(0, 0, 0, 0.45)'
                           : isDark
-                          ? "rgba(255, 255, 255, 0.08)"
-                          : "rgba(0, 0, 0, 0.12)"
+                            ? 'rgba(255, 255, 255, 0.08)'
+                            : 'rgba(0, 0, 0, 0.12)'
                       }
-                      strokeWidth={isHovered ? "1.5" : "1"}
-                      strokeDasharray={isHovered ? "none" : "3 6"}
+                      strokeWidth={isHovered ? '1.5' : '1'}
+                      strokeDasharray={isHovered ? 'none' : '3 6'}
                       className="transition-all duration-300"
                     />
 
-                    {/* Flowing Animated Energy Particle */}
                     <circle
                       r={isHovered ? 2.5 : 1.5}
-                      fill={isDark ? "#ffffff" : "#18181b"}
+                      fill={isDark ? '#ffffff' : '#18181b'}
                       opacity={isHovered ? 0.9 : 0.45}
                     >
                       <animateMotion
@@ -255,18 +247,14 @@ export function PipelineAnimation() {
               })}
             </svg>
 
-            {/* Central Forjex Core Hub */}
             <div className="absolute z-10 flex items-center justify-center">
-              {/* Outer Ring Accent with Subtle Glow */}
               <div className="w-16 h-16 rounded-full border border-neutral-300 dark:border-white/15 bg-white dark:bg-neutral-950/90 backdrop-blur-xl flex items-center justify-center shadow-lg dark:shadow-[0_0_30px_rgba(255,255,255,0.08)] group cursor-pointer transition-all duration-300 hover:border-neutral-400 dark:hover:border-white/40">
-                {/* Inner Icon Circle with Forjex Flame */}
                 <div className="w-10 h-10 rounded-full border border-neutral-200 dark:border-white/20 bg-neutral-900 dark:bg-zinc-900 flex items-center justify-center text-white transition-transform group-hover:scale-110 shadow-inner">
-                  <Flame className="w-5 h-5 text-white fill-current" />
+                  <ForjexIcon className="w-5 h-5 text-white" />
                 </div>
               </div>
             </div>
 
-            {/* Symmetrically Distributed Forjex Ecosystem Badges */}
             {FORJEX_NODES.map((node) => {
               const Icon = node.icon;
               const isHovered = hoveredNode?.id === node.id;
@@ -275,10 +263,10 @@ export function PipelineAnimation() {
                 <motion.div
                   key={node.id}
                   style={{
-                    position: "absolute",
+                    position: 'absolute',
                     left: `calc(50% + ${node.offsetX}px)`,
                     top: `calc(50% + ${node.offsetY}px)`,
-                    transform: "translate(-50%, -50%)",
+                    transform: 'translate(-50%, -50%)',
                   }}
                   animate={{
                     y: [-3.5, 3.5, -3.5],
@@ -287,7 +275,7 @@ export function PipelineAnimation() {
                   transition={{
                     duration: node.duration,
                     repeat: Infinity,
-                    ease: "easeInOut",
+                    ease: 'easeInOut',
                     delay: node.delay,
                   }}
                   className="z-20"
@@ -298,11 +286,11 @@ export function PipelineAnimation() {
                     className={`group relative flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border transition-all duration-200 cursor-pointer select-none backdrop-blur-md shadow-md ${
                       isHovered
                         ? isDark
-                          ? "bg-zinc-800/95 border-white/50 text-white shadow-[0_0_24px_rgba(255,255,255,0.18)] scale-105"
-                          : "bg-neutral-900 border-neutral-900 text-white shadow-xl scale-105"
+                          ? 'bg-zinc-800/95 border-white/50 text-white shadow-[0_0_24px_rgba(255,255,255,0.18)] scale-105'
+                          : 'bg-neutral-900 border-neutral-900 text-white shadow-xl scale-105'
                         : isDark
-                        ? "bg-zinc-950/90 border-zinc-800/90 text-neutral-300 hover:border-zinc-500 hover:text-white hover:bg-zinc-900/90"
-                        : "bg-white/95 border-neutral-200 text-neutral-700 hover:border-neutral-400 hover:text-neutral-950 hover:bg-white"
+                          ? 'bg-zinc-950/90 border-zinc-800/90 text-neutral-300 hover:border-zinc-500 hover:text-white hover:bg-zinc-900/90'
+                          : 'bg-white/95 border-neutral-200 text-neutral-700 hover:border-neutral-400 hover:text-neutral-950 hover:bg-white'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5 shrink-0 text-neutral-500 dark:text-neutral-400 group-hover:text-inherit transition-colors" />
@@ -310,16 +298,14 @@ export function PipelineAnimation() {
                       {node.label}
                     </span>
 
-                    {/* Small Status Indicator Dot */}
                     <span
                       className={`w-1.5 h-1.5 rounded-full transition-colors ${
                         isHovered
-                          ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
-                          : "bg-neutral-400 dark:bg-neutral-600"
+                          ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]'
+                          : 'bg-neutral-400 dark:bg-neutral-600'
                       }`}
                     />
 
-                    {/* Interactive Telemetry Tooltip */}
                     <AnimatePresence>
                       {isHovered && (
                         <motion.div
@@ -351,7 +337,6 @@ export function PipelineAnimation() {
           </div>
         </div>
 
-        {/* Footer Info Strip */}
         <div className="relative z-30 border-t border-neutral-200 dark:border-white/[0.06] bg-white/70 dark:bg-neutral-950/60 backdrop-blur-md transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-neutral-600 dark:text-neutral-400 font-mono">
             <div className="flex items-center gap-2">

@@ -1,1 +1,1 @@
-export { GET } from "@/app/api/auth/github/callback/route";
+export { GET } from '@/app/api/auth/github/callback/route';

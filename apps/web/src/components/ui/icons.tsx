@@ -1,16 +1,8 @@
-import * as React from "react";
+import * as React from 'react';
 
-export function GithubIcon({
-  className = "w-4 h-4",
-  ...props
-}: React.SVGProps<SVGSVGElement>) {
+export function GithubIcon({ className = 'w-4 h-4', ...props }: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-      {...props}
-    >
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} {...props}>
       <path
         fillRule="evenodd"
         clipRule="evenodd"
@@ -20,17 +12,9 @@ export function GithubIcon({
   );
 }
 
-export function VercelIcon({
-  className = "w-4 h-4",
-  ...props
-}: React.SVGProps<SVGSVGElement>) {
+export function VercelIcon({ className = 'w-4 h-4', ...props }: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg
-      viewBox="0 0 116 100"
-      fill="currentColor"
-      className={className}
-      {...props}
-    >
+    <svg viewBox="0 0 116 100" fill="currentColor" className={className} {...props}>
       <path fillRule="evenodd" clipRule="evenodd" d="M57.5 0L115 100H0L57.5 0z" />
     </svg>
   );

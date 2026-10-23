@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Contribution process
+    url: https://github.com/daviddozie/forjex/blob/main/CONTRIBUTING.md
+    about: Read the issue approval, development, and pull request requirements before contributing.

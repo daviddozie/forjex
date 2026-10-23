@@ -1,22 +1,19 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 import {
   Terminal,
   ShieldCheck,
   CheckCircle2,
   AlertCircle,
-  ExternalLink,
   ArrowRight,
-  Database,
   Loader2,
-  Sparkles,
-} from "lucide-react";
-import { GithubIcon, VercelIcon } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+} from 'lucide-react';
+import { GithubIcon, VercelIcon } from '@/components/ui/icons';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 export default function CliAuthPage() {
   return (
@@ -33,9 +30,9 @@ export default function CliAuthPage() {
 }
 
 function CliAuthContent() {
-  const [session, setSession] = React.useState("");
+  const [session, setSession] = React.useState('');
   React.useEffect(() => {
-    setSession(new URLSearchParams(window.location.hash.slice(1)).get("session") || "");
+    setSession(new URLSearchParams(window.location.hash.slice(1)).get('session') || '');
   }, []);
 
   const [loading, setLoading] = React.useState(true);
@@ -51,19 +48,18 @@ function CliAuthContent() {
     vercel: { connected: false },
   });
 
-  const [manualGithubToken, setManualGithubToken] = React.useState("");
-  const [manualVercelToken, setManualVercelToken] = React.useState("");
+  const [manualGithubToken, setManualGithubToken] = React.useState('');
+  const [manualVercelToken] = React.useState('');
 
   React.useEffect(() => {
     async function loadCreds() {
       try {
-        const res = await fetch("/api/auth/credentials");
+        const res = await fetch('/api/auth/credentials');
         if (res.ok) {
           const data = await res.json();
           setCreds(data);
         }
-      } catch (err) {
-        // ignore
+      } catch {
       } finally {
         setLoading(false);
       }
@@ -81,10 +77,9 @@ function CliAuthContent() {
     setError(null);
 
     try {
-      // 1. Authorize on web server
-      const res = await fetch("/api/auth/cli", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/auth/cli', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session,
           githubToken: manualGithubToken.trim() || undefined,
@@ -94,12 +89,12 @@ function CliAuthContent() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || "Failed to authorize session");
+        throw new Error(data.error || 'Failed to authorize session');
       }
 
       setAuthorized(true);
     } catch (err: any) {
-      setError(err.message || "Failed to authorize CLI session");
+      setError(err.message || 'Failed to authorize CLI session');
     } finally {
       setSubmitting(false);
     }
@@ -116,7 +111,7 @@ function CliAuthContent() {
             Authorize Forjex CLI
           </CardTitle>
           <p className="text-xs text-neutral-500 mt-1">
-            Connect your terminal command line to Forjex Cloud SaaS.
+            Connect your terminal command line to Forjex.
           </p>
         </CardHeader>
 
@@ -138,18 +133,18 @@ function CliAuthContent() {
                   CLI Successfully Authenticated!
                 </h3>
                 <p className="text-xs text-neutral-500 max-w-xs mx-auto">
-                  You can now close this browser tab and return to your terminal. Your forged repositories will automatically sync with the cloud.
+                  You can now close this browser tab and return to your terminal. Your forged
+                  repositories will automatically sync with the cloud.
                 </p>
               </div>
             </div>
           ) : (
             <>
-              {/* Session info */}
               <div className="p-3 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-neutral-500">Terminal Session:</span>
                   <span className="font-mono font-medium text-neutral-900 dark:text-white">
-                    {session ? session.slice(0, 16) + "..." : "Unknown"}
+                    {session ? session.slice(0, 16) + '...' : 'Unknown'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
@@ -160,7 +155,6 @@ function CliAuthContent() {
                 </div>
               </div>
 
-              {/* Connected accounts detection */}
               <div className="space-y-2">
                 <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">
                   Cloud Credentials:
@@ -200,7 +194,6 @@ function CliAuthContent() {
                 </div>
               </div>
 
-              {/* Manual input if credentials not stored in browser cookies */}
               {!creds.github.connected && (
                 <div className="space-y-2 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                   <span className="text-[11px] text-neutral-500 block">
@@ -216,7 +209,6 @@ function CliAuthContent() {
                 </div>
               )}
 
-              {/* Permissions list */}
               <div className="space-y-1.5 pt-1 text-[11px] text-neutral-500">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
