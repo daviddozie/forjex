@@ -398,7 +398,7 @@ export function getTemplateFiles(framework: string, projectName: string): Templa
                 lint: "next lint",
               },
               dependencies: {
-                next: "15.1.7",
+                next: "15.5.28",
                 react: "19.0.0",
                 "react-dom": "19.0.0",
                 "lucide-react": "^0.475.0",

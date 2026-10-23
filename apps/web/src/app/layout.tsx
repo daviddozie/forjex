@@ -9,7 +9,6 @@ const geist = Geist({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
-  // Next.js 15.0.3 has no fallback metrics for Geist.
   adjustFontFallback: false,
 });
 
