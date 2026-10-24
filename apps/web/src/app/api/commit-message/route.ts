@@ -19,10 +19,26 @@ export async function POST(request: Request) {
         { error: 'Connect GitHub before generating a message.' },
         { status: 401 },
       );
-    const body = await request.json();
+    let parsedBody: unknown;
+    try {
+      parsedBody = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    }
+    if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody))
+      return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    const body = parsedBody as Record<string, unknown>;
     if (
-      !['new', 'existing'].includes(body.repoMode) ||
-      !['nextjs', 'vite-react', 'python-fastapi', 'go-api', 'rust-app'].includes(body.template)
+      (body.repoMode !== 'new' && body.repoMode !== 'existing') ||
+      typeof body.template !== 'string' ||
+      !['nextjs', 'vite-react', 'python-fastapi', 'go-api', 'rust-app'].includes(body.template) ||
+      typeof body.name !== 'string' ||
+      (body.existingRepoUrl !== undefined && typeof body.existingRepoUrl !== 'string') ||
+      (body.provider !== undefined && typeof body.provider !== 'string') ||
+      (body.model !== undefined && typeof body.model !== 'string') ||
+      ['isPrivate', 'addReadme', 'addCICD', 'deployVercel'].some(
+        (field) => body[field] !== undefined && typeof body[field] !== 'boolean',
+      )
     ) {
       return NextResponse.json({ error: 'Invalid project configuration.' }, { status: 400 });
     }
@@ -51,14 +67,11 @@ export async function POST(request: Request) {
     }
     const options: ForgeRepositoryOptions = {
       repoMode: body.repoMode,
-      existingRepoUrl: body.existingRepoUrl,
-      name:
-        typeof body.name === 'string'
-          ? body.name
-              .trim()
-              .toLowerCase()
-              .replace(/[^a-z0-9-_]/g, '-')
-          : '',
+      existingRepoUrl: body.existingRepoUrl as string | undefined,
+      name: body.name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]/g, '-'),
       description: '',
       isPrivate: Boolean(body.isPrivate),
       template: body.template,

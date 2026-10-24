@@ -4,6 +4,66 @@ import { test } from 'node:test';
 delete process.env.DATABASE_URL;
 const { POST } = await import('../src/app/api/commit-message/route');
 
+test('cloud generation rejects malformed bodies and invalid field types before provider requests', async () => {
+  const original = globalThis.fetch;
+  let unexpectedCalls = 0;
+  globalThis.fetch = async (input) => {
+    if (String(input) === 'https://api.github.com/user')
+      return Response.json({ id: 1, login: 'alice' });
+    unexpectedCalls++;
+    throw new Error('Invalid input must not reach a provider.');
+  };
+  const valid = {
+    repoMode: 'new',
+    name: 'my-app',
+    template: 'nextjs',
+    apiKey: 'request-only-key',
+    model: 'custom-model',
+  };
+  const invalidBodies = [
+    '',
+    '{',
+    'null',
+    '[]',
+    'true',
+    '42',
+    '"text"',
+    ...[
+      {},
+      { ...valid, repoMode: 'other' },
+      { ...valid, template: [] },
+      { ...valid, name: {} },
+      { ...valid, provider: {} },
+      { ...valid, model: [] },
+      { ...valid, apiKey: 123 },
+      { ...valid, existingRepoUrl: {} },
+      { ...valid, repoMode: 'existing', existingRepoUrl: 'https://example.com/a/b' },
+      ...['isPrivate', 'addReadme', 'addCICD', 'deployVercel'].map((field) => ({
+        ...valid,
+        [field]: 'false',
+      })),
+    ].map((body) => JSON.stringify(body)),
+  ];
+  try {
+    for (const body of invalidBodies) {
+      const response = await POST(
+        new Request('https://forjex.test/api/commit-message', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer github-test', 'Content-Type': 'application/json' },
+          body,
+        }),
+      );
+      assert.equal(response.status, 400, `Body: ${body}`);
+      const result = await response.json();
+      assert.equal(typeof result.error, 'string');
+      assert.ok(!JSON.stringify(result).includes('request-only-key'));
+    }
+    assert.equal(unexpectedCalls, 0);
+  } finally {
+    globalThis.fetch = original;
+  }
+});
+
 test('authenticated cloud generation previews real additions without writing GitHub or persisting an API key', async () => {
   const original = globalThis.fetch;
   const calls: { url: string; method: string; body: any }[] = [];
