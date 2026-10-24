@@ -7,7 +7,7 @@ export async function GET(request: Request) {
   const clientId = process.env.GITHUB_CLIENT_ID || 'Ov23liRqj5mMaAS6fFiP';
   const returnTo = safeReturnTo(searchParams.get('returnTo'));
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || origin;
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || origin).replace(/\/+$/, '');
   const redirectUri = process.env.GITHUB_OAUTH_REDIRECT_URI || `${appUrl}/api/auth/github/callback`;
 
   const githubAuthUrl = new URL('https://github.com/login/oauth/authorize');
