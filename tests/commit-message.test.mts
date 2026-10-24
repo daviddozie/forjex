@@ -159,3 +159,40 @@ test('push commits only the index and pushes the current feature branch without 
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('declining AI counts staged paths without loading per-file patches', async () => {
+  const inquirer = (await import('inquirer')).default;
+  const { CommitMessageGenerator } = await import('../src/services/commit-generator');
+  const { readFileSync } = await import('node:fs');
+  const directory = mkdtempSync(join(tmpdir(), 'forjex-no-ai-'));
+  const prompt = inquirer.prompt;
+  const tty = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+  const trace = process.env.GIT_TRACE;
+  const log = console.log;
+  const git = (...args: string[]) =>
+    execFileSync('git', args, { cwd: directory, encoding: 'utf8' });
+  try {
+    git('init', '-b', 'main');
+    writeFileSync(join(directory, 'large.txt'), 'content\n'.repeat(1000));
+    git('add', '.');
+    process.env.GIT_TRACE = join(directory, 'git-trace.log');
+    Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: true });
+    console.log = () => {};
+    (inquirer as any).prompt = async () => ({ useAI: false, action: 'accept' });
+    assert.equal(
+      await new CommitMessageGenerator(directory).generateCommitMessage(),
+      'chore: update 1 file',
+    );
+    const commands = readFileSync(process.env.GIT_TRACE, 'utf8');
+    assert.match(commands, /diff --cached --name-only/);
+    assert.doesNotMatch(commands, /--no-ext-diff/);
+  } finally {
+    inquirer.prompt = prompt;
+    console.log = log;
+    if (tty) Object.defineProperty(process.stdin, 'isTTY', tty);
+    else delete (process.stdin as any).isTTY;
+    if (trace === undefined) delete process.env.GIT_TRACE;
+    else process.env.GIT_TRACE = trace;
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

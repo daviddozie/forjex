@@ -1,10 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { readFileSync, writeFileSync, mkdirSync, chmodSync, rmSync } from 'node:fs';
-import { DEFAULT_AI_MODEL, validAIModel } from '../ai/settings.js';
+import { readFileSync, writeFileSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import { AI_PROVIDERS, isAIProvider, validAIModel, type AIProvider } from '../ai/settings.js';
 
 export interface AIConfig {
-  provider: 'openai';
+  provider: AIProvider;
   model: string;
   apiKey?: string;
 }
@@ -13,7 +14,7 @@ const defaultDirectory = () => join(homedir(), '.forjex');
 export function loadAIConfig(directory = defaultDirectory()): AIConfig | null {
   try {
     const config = JSON.parse(readFileSync(join(directory, 'ai.json'), 'utf8'));
-    if (config.provider !== 'openai' || !validAIModel(config.model)) return null;
+    if (!isAIProvider(config.provider) || !validAIModel(config.model)) return null;
     if (config.apiKey !== undefined && (typeof config.apiKey !== 'string' || !config.apiKey.trim()))
       return null;
     return config;
@@ -23,12 +24,17 @@ export function loadAIConfig(directory = defaultDirectory()): AIConfig | null {
 }
 
 export function saveAIConfig(config: AIConfig, directory = defaultDirectory()) {
-  if (config.provider !== 'openai' || !validAIModel(config.model))
+  if (!isAIProvider(config.provider) || !validAIModel(config.model))
     throw new Error('Invalid AI configuration.');
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   const file = join(directory, 'ai.json');
-  writeFileSync(file, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
-  chmodSync(file, 0o600);
+  const temporary = join(directory, `.ai.${randomUUID()}.tmp`);
+  try {
+    writeFileSync(temporary, JSON.stringify(config, null, 2) + '\n', { mode: 0o600, flag: 'wx' });
+    renameSync(temporary, file);
+  } finally {
+    rmSync(temporary, { force: true });
+  }
 }
 
 export function clearAIConfig(directory = defaultDirectory()) {
@@ -36,16 +42,21 @@ export function clearAIConfig(directory = defaultDirectory()) {
 }
 
 export function resolveAIConfig(env: NodeJS.ProcessEnv = process.env, saved = loadAIConfig()) {
-  const model = env.FORJEX_AI_MODEL || saved?.model || DEFAULT_AI_MODEL;
+  const provider = env.FORJEX_AI_PROVIDER || saved?.provider || 'openai';
+  if (!isAIProvider(provider)) throw new Error('Unsupported AI provider. Run forjex ai configure.');
+  const matching = saved?.provider === provider ? saved : null;
+  const model = env.FORJEX_AI_MODEL || matching?.model || AI_PROVIDERS[provider].defaultModel;
   if (!validAIModel(model))
-    throw new Error('Invalid AI model. Run forjex ai configure or set FORJEX_AI_MODEL.');
+    throw new Error('Choose a model with forjex ai configure or FORJEX_AI_MODEL.');
+  const environmentKey =
+    env[AI_PROVIDERS[provider].keyEnv] || (provider === 'gemini' ? env.GOOGLE_API_KEY : undefined);
   return {
-    provider: 'openai' as const,
+    provider,
     model,
-    apiKey: env.OPENAI_API_KEY || saved?.apiKey || '',
-    keySource: env.OPENAI_API_KEY
+    apiKey: environmentKey || matching?.apiKey || '',
+    keySource: environmentKey
       ? 'environment'
-      : saved?.apiKey
+      : matching?.apiKey
         ? 'saved configuration'
         : 'not configured',
   };

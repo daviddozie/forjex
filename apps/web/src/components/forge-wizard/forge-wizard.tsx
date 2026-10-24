@@ -1,6 +1,12 @@
 'use client';
 
-import { DEFAULT_AI_MODEL, validAIModel } from '../../../../../src/ai/settings';
+import {
+  DEFAULT_AI_MODEL,
+  validAIModel,
+  AI_PROVIDERS,
+  type AIProvider,
+} from '../../../../../src/ai/settings';
+import packageInfo from '../../../../../package.json';
 
 import { ForjexIcon } from '@/components/ui/forjex-icon';
 import { CodeSnippet } from '@/components/ui/code-snippet';
@@ -19,6 +25,8 @@ import {
   Zap,
   Key,
   AlertCircle,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { GithubIcon } from '@/components/ui/icons';
 import { CredentialsModal } from '@/components/credentials-modal';
@@ -26,6 +34,14 @@ import confetti from 'canvas-confetti';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import { parseGitHubRepository } from '@/lib/github-repository';
 import { cn } from '@/lib/utils';
@@ -117,7 +133,9 @@ export function ForgeWizard() {
   const [deployVercel, setDeployVercel] = React.useState(true);
   const [existingRepoUrl, setExistingRepoUrl] = React.useState('');
   const [commitMessage, setCommitMessage] = React.useState('');
+  const [aiProvider, setAiProvider] = React.useState<AIProvider>('openai');
   const [aiKey, setAiKey] = React.useState('');
+  const [showAiKey, setShowAiKey] = React.useState(false);
   const [aiModel, setAiModel] = React.useState<string>(DEFAULT_AI_MODEL);
   const [generatingMessage, setGeneratingMessage] = React.useState(false);
   const [messageError, setMessageError] = React.useState<string | null>(null);
@@ -209,6 +227,7 @@ export function ForgeWizard() {
           deployVercel,
           apiKey: aiKey,
           model: aiModel.trim(),
+          provider: aiProvider,
         }),
       });
       const data = await response.json();
@@ -279,6 +298,7 @@ export function ForgeWizard() {
       });
 
       setAiKey('');
+      setShowAiKey(false);
       setStep('success');
 
       try {
@@ -308,6 +328,7 @@ export function ForgeWizard() {
     setCommitMessage('');
     setCommitPreview(null);
     setAiKey('');
+    setShowAiKey(false);
     setMessageError(null);
   };
 
@@ -322,7 +343,7 @@ export function ForgeWizard() {
             <h2 className="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
               Forjex Orchestrator
               <Badge variant="vercel" className="text-[10px]">
-                v1.6
+                v{packageInfo.version}
               </Badge>
             </h2>
             <p className="text-xs text-neutral-500">
@@ -710,7 +731,37 @@ export function ForgeWizard() {
                 }
                 className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent p-3 text-sm font-mono"
               />
-              <p className="text-xs text-neutral-500">AI provider: OpenAI</p>
+              <label htmlFor="ai-provider" className="block text-xs font-medium">
+                AI provider
+              </label>
+              <Select
+                value={aiProvider}
+                disabled={generatingMessage}
+                onValueChange={(value) => {
+                  const provider = value as AIProvider;
+                  setAiProvider(provider);
+                  setAiModel(AI_PROVIDERS[provider].defaultModel);
+                  setAiKey('');
+                  setShowAiKey(false);
+                  setMessageError(null);
+                }}
+              >
+                <SelectTrigger
+                  id="ai-provider"
+                  className="w-full rounded-md border-neutral-300 data-[size=default]:h-10 dark:border-neutral-700"
+                >
+                  <SelectValue placeholder="Choose an AI provider" />
+                </SelectTrigger>
+                <SelectContent position="popper" align="start">
+                  <SelectGroup>
+                    {Object.entries(AI_PROVIDERS).map(([id, provider]) => (
+                      <SelectItem key={id} value={id}>
+                        {provider.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
               <label htmlFor="ai-model" className="block text-xs font-medium">
                 Model ID
               </label>
@@ -718,33 +769,56 @@ export function ForgeWizard() {
                 id="ai-model"
                 value={aiModel}
                 onChange={(event) => setAiModel(event.target.value)}
-                maxLength={128}
+                maxLength={200}
+                disabled={generatingMessage}
                 spellCheck={false}
-                placeholder={DEFAULT_AI_MODEL}
+                placeholder={
+                  AI_PROVIDERS[aiProvider].defaultModel || 'Enter your provider’s model ID'
+                }
                 className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent p-2 text-sm"
               />
               <p className="text-xs text-neutral-500">
-                Use a model available to your OpenAI account that supports structured text output.
-                Model and key stay in page memory.
+                Choose a text-generation model available to your selected provider’s account. It
+                must be able to return a JSON commit message. OpenRouter IDs use author/model
+                notation. Model and key stay in page memory.
               </p>
               <label htmlFor="ai-key" className="block text-xs font-medium">
-                OpenAI API key for optional AI generation
+                {AI_PROVIDERS[aiProvider].label} API key for optional AI generation
               </label>
-              <input
-                id="ai-key"
-                type="password"
-                autoComplete="off"
-                spellCheck={false}
-                value={aiKey}
-                onChange={(event) => setAiKey(event.target.value)}
-                placeholder="sk-…"
-                className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent p-2 text-sm"
-              />
+              <div className="relative">
+                <input
+                  id="ai-key"
+                  type={showAiKey ? 'text' : 'password'}
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={aiKey}
+                  onChange={(event) => setAiKey(event.target.value)}
+                  placeholder="Enter your API key"
+                  disabled={generatingMessage}
+                  className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent p-2 pr-12 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAiKey((visible) => !visible)}
+                  aria-label={showAiKey ? 'Hide API key' : 'Show API key'}
+                  title={showAiKey ? 'Hide API key' : 'Show API key'}
+                  aria-controls="ai-key"
+                  aria-pressed={showAiKey}
+                  className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center rounded-r-md text-neutral-500 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 dark:hover:text-white"
+                >
+                  {showAiKey ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
               <p className="text-xs text-neutral-500">
-                Generate sends a bounded, filtered snapshot of the planned text changes to OpenAI
-                through our server. Sensitive paths and recognized secrets are filtered; review your
-                code for other confidential content. Your key stays in memory and is not saved.
-                Cloud can summarize the changes it prepares, not unpushed files on your computer.
+                Generate sends a bounded, filtered snapshot of the planned text changes to{' '}
+                {AI_PROVIDERS[aiProvider].label} through our server. Sensitive paths and recognized
+                secrets are filtered; review your code for other confidential content. Your key
+                stays in memory and is not saved. Cloud can summarize the changes it prepares, not
+                unpushed files on your computer.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button

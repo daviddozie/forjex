@@ -76,3 +76,64 @@ test('authenticated cloud generation previews real additions without writing Git
     globalThis.fetch = original;
   }
 });
+
+test('cloud routes selected providers and rejects unknown providers before sending the AI key', async () => {
+  const original = globalThis.fetch;
+  const targets: Record<string, string> = {
+    openrouter: 'openrouter.ai',
+    gemini: 'generativelanguage.googleapis.com',
+    grok: 'api.x.ai',
+    anthropic: 'api.anthropic.com',
+    mistral: 'api.mistral.ai',
+  };
+  const message = JSON.stringify({ title: 'feat: bootstrap project', body: 'Add the starter.' });
+  let selected = '';
+  let aiCalls = 0;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.hostname === 'api.github.com' && url.pathname === '/user')
+      return Response.json({ id: 1, login: 'alice' });
+    aiCalls++;
+    assert.equal(url.hostname, targets[selected]);
+    const headers = new Headers(init?.headers);
+    assert.equal(
+      selected === 'gemini' ? headers.get('x-goog-api-key') : headers.get('authorization'),
+      selected === 'gemini' ? 'selected-key' : 'Bearer selected-key',
+    );
+    if (selected === 'gemini')
+      return Response.json({
+        candidates: [{ finishReason: 'STOP', content: { parts: [{ text: message }] } }],
+      });
+    if (selected === 'anthropic')
+      return Response.json({ stop_reason: 'end_turn', content: [{ type: 'text', text: message }] });
+    return Response.json({ choices: [{ finish_reason: 'stop', message: { content: message } }] });
+  };
+  try {
+    for (const provider of [...Object.keys(targets), 'unknown']) {
+      selected = provider;
+      const before = aiCalls;
+      const response = await POST(
+        new Request('https://forjex.test/api/commit-message', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer github-test', 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            repoMode: 'new',
+            name: 'my-app',
+            template: 'nextjs',
+            provider,
+            model: provider === 'openrouter' ? 'author/model' : 'sample-model',
+            apiKey: 'selected-key',
+            addCICD: false,
+            deployVercel: false,
+          }),
+        }),
+      );
+      const result = await response.json();
+      assert.equal(response.status, provider === 'unknown' ? 400 : 200, JSON.stringify(result));
+      assert.equal(aiCalls, before + (provider === 'unknown' ? 0 : 1));
+      assert.ok(!JSON.stringify(result).includes('selected-key'));
+    }
+  } finally {
+    globalThis.fetch = original;
+  }
+});

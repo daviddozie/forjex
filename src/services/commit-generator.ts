@@ -1,3 +1,4 @@
+import { AI_PROVIDERS, DEFAULT_AI_MODEL } from '../ai/settings.js';
 import { resolveAIConfig } from '../utils/ai-config.js';
 import simpleGit from 'simple-git';
 import inquirer from 'inquirer';
@@ -48,17 +49,27 @@ export class CommitMessageGenerator {
     if (!process.stdin.isTTY) throw new Error('Use --message for a non-interactive commit.');
     const git = simpleGit(this.directory);
     const reviewedTree = await git.raw(['write-tree']);
-    const changes = await stagedChanges(this.directory);
-    let message = `chore: update ${changes.length} file${changes.length === 1 ? '' : 's'}`;
-    const ai = resolveAIConfig();
+    const count = (await git.raw(['diff', '--cached', '--name-only', '-z']))
+      .split('\0')
+      .filter(Boolean).length;
+    let changes: CommitChange[] | undefined;
+    let message = `chore: update ${count} file${count === 1 ? '' : 's'}`;
+    let ai: ReturnType<typeof resolveAIConfig>;
+    try {
+      ai = resolveAIConfig();
+    } catch {
+      logger.warn(
+        'Invalid AI settings. Run forjex ai configure; manual messages are still available.',
+      );
+      ai = { provider: 'openai', model: DEFAULT_AI_MODEL, apiKey: '', keySource: 'not configured' };
+    }
     let useAI = Boolean(options.ai);
     if (!useAI && process.stdin.isTTY && ai.apiKey) {
       ({ useAI } = await inquirer.prompt([
         {
           type: 'confirm',
           name: 'useAI',
-          message:
-            'Generate an AI commit message with OpenAI? Filtered changes will be sent to OpenAI.',
+          message: `Generate a commit message with ${AI_PROVIDERS[ai.provider].label}? Filtered changes will be sent to this provider.`,
           default: false,
         },
       ]));
@@ -67,12 +78,14 @@ export class CommitMessageGenerator {
       logger.info('Run forjex ai configure to set up your model and API key.');
     if (useAI) {
       logger.info(
-        'AI sends bounded text changes to OpenAI; sensitive paths and recognized secrets are filtered. Review your changes for other confidential content.',
+        `AI sends bounded text changes to ${AI_PROVIDERS[ai.provider].label}; sensitive paths and recognized secrets are filtered. Review your changes for other confidential content.`,
       );
       const spinner = logger.spinner('Generating commit message…');
       try {
+        changes = await stagedChanges(this.directory);
         const result = await generateAICommitMessage(changes, {
           apiKey: ai.apiKey,
+          provider: ai.provider,
           model: ai.model,
         });
         message = result.message;
@@ -112,9 +125,11 @@ export class CommitMessageGenerator {
       if (action === 'cancel') throw new Error('Commit cancelled. Your changes are still staged.');
       if (action === 'regenerate') {
         try {
+          changes ??= await stagedChanges(this.directory);
           message = (
             await generateAICommitMessage(changes, {
               apiKey: ai.apiKey,
+              provider: ai.provider,
               model: ai.model,
             })
           ).message;

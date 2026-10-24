@@ -9,3 +9,5 @@
 - Check cloud preview file additions before committing and preserve GitHub's assigned default branch for new repositories.
 
 - Add `forjex ai configure`, `ai status`, and `ai clear`, plus an OpenAI model field in the cloud wizard.
+
+- Support OpenAI, OpenRouter, Google Gemini, Grok, Anthropic, and Mistral for CLI and cloud commit messages, with provider-specific credentials and response handling.

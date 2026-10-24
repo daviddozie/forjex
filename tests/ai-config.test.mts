@@ -49,3 +49,57 @@ test('invalid saved settings are ignored and invalid model overrides are rejecte
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('changing provider never reuses a different provider’s saved model or API key', () => {
+  const saved = {
+    provider: 'openai' as const,
+    model: 'saved-openai-model',
+    apiKey: 'saved-openai-key',
+  };
+  const switched = resolveAIConfig(
+    {
+      FORJEX_AI_PROVIDER: 'openrouter',
+      FORJEX_AI_MODEL: 'author/model',
+      OPENAI_API_KEY: 'wrong-provider-key',
+    },
+    saved,
+  );
+  assert.equal(switched.provider, 'openrouter');
+  assert.equal(switched.apiKey, '');
+  assert.equal(switched.model, 'author/model');
+  assert.equal(
+    resolveAIConfig(
+      {
+        FORJEX_AI_PROVIDER: 'openrouter',
+        FORJEX_AI_MODEL: 'author/model',
+        OPENROUTER_API_KEY: 'right-provider-key',
+      },
+      saved,
+    ).apiKey,
+    'right-provider-key',
+  );
+  assert.throws(() => resolveAIConfig({ FORJEX_AI_PROVIDER: 'unsupported' }, saved), /Unsupported/);
+});
+
+test('saving AI credentials atomically replaces a permissive file and does not follow an existing symlink', async () => {
+  const { chmodSync, readdirSync, symlinkSync, lstatSync } = await import('node:fs');
+  const directory = mkdtempSync(join(tmpdir(), 'forjex-ai-atomic-'));
+  try {
+    const target = join(directory, 'old-config.json');
+    const file = join(directory, 'ai.json');
+    writeFileSync(target, 'must remain unchanged');
+    symlinkSync(target, file);
+    saveAIConfig({ provider: 'openai', model: 'sample', apiKey: 'new-private-key' }, directory);
+    assert.equal(lstatSync(file).isSymbolicLink(), false);
+    assert.equal(readFileSync(target, 'utf8'), 'must remain unchanged');
+    chmodSync(file, 0o644);
+    const before = statSync(file).ino;
+    saveAIConfig({ provider: 'openai', model: 'updated', apiKey: 'replacement-key' }, directory);
+    assert.notEqual(statSync(file).ino, before);
+    assert.equal(statSync(file).mode & 0o777, 0o600);
+    assert.equal(loadAIConfig(directory)?.model, 'updated');
+    assert.ok(!readdirSync(directory).some((path) => path.endsWith('.tmp')));
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

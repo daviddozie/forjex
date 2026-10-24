@@ -42,6 +42,7 @@ function github({
     const path = decodeURIComponent(url.pathname);
     const body = init?.body ? JSON.parse(String(init.body)) : null;
     calls.push({ method, path, query: url.search, body });
+    if (method === 'GET' && path === '/user') return Response.json({ login: 'team' });
     if (method === 'POST' && path === '/user/repos')
       return Response.json(repository, { status: 201 });
     if (method === 'GET' && path === '/repos/team/existing-app') return Response.json(repository);
@@ -285,4 +286,38 @@ test('new project AI previews allow GitHub to assign the default branch without 
     commitPlanHash(preview.additions.slice(1), settings),
     commitPlanHash(actual.additions, settings),
   );
+});
+
+test('a stale new-project AI preview is rejected before creating any GitHub resources', async () => {
+  const { client, calls } = github();
+  await assert.rejects(
+    forgeRepository(client, {
+      ...options,
+      repoMode: 'new',
+      name: 'requested-app',
+      commitPlanHash: '0'.repeat(64),
+    }),
+    (error: any) => error.status === 409,
+  );
+  assert.deepEqual(writes(calls), []);
+  assert.deepEqual(
+    calls.map((call) => call.path),
+    ['/user'],
+  );
+});
+
+test('a valid new-project preview is checked before creation and tolerates GitHub name normalization', async () => {
+  const { prepareForgeChanges, commitPlanHash } = await import('../src/lib/forge-repository');
+  const { client, calls } = github();
+  const settings = { ...options, repoMode: 'new' as const, name: 'requested-app' };
+  const planned = await prepareForgeChanges(client, settings, 'team', 'requested-app', 'main');
+  await forgeRepository(client, {
+    ...settings,
+    commitPlanHash: commitPlanHash(planned.additions, settings),
+  });
+  assert.deepEqual(
+    calls.slice(0, 2).map((call) => call.path),
+    ['/user', '/user/repos'],
+  );
+  assert.ok(calls.some((call) => call.path.endsWith('/git/commits') && call.method === 'POST'));
 });

@@ -1,3 +1,4 @@
+import { AI_PROVIDERS } from '../../../../../src/ai/settings';
 import { getTemplateStructure } from '../../../../../src/templates/structure';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -699,10 +700,10 @@ export function getDocSections(slug: string): DocSection[] {
                 filename="Later commits"
               />
               <p className="mt-4">
-                Set <code className={inline}>OPENAI_API_KEY</code> in your terminal environment to
-                generate a message from staged text changes. Accept, edit, regenerate, or cancel
-                before committing. Existing commits keep their messages. The push command does not
-                run build checks; run your project checks before pushing.
+                Run <code className={inline}>forjex ai configure</code> or set your provider’s
+                API-key environment variable to generate a message from staged text changes. Accept,
+                edit, regenerate, or cancel before committing. Existing commits keep their messages.
+                The push command does not run build checks; run your project checks before pushing.
               </p>
               <Link href="/docs/cli#push" className={link}>
                 Read the push and AI reference →
@@ -965,23 +966,24 @@ export function getDocSections(slug: string): DocSection[] {
               <p>
                 In the Pipelines step, use the optional commit-message editor to write a message
                 manually or choose <strong>Generate with AI</strong>. AI generation requires a
-                connected GitHub account, an OpenAI model ID, and your API key. Generation previews
-                the planned starter or configuration additions without writing to GitHub.
+                connected GitHub account, a selected AI provider, its model ID, and your API key.
+                Generation previews the planned starter or configuration additions without writing
+                to GitHub.
               </p>
               <List
                 items={[
-                  'Choose an OpenAI model ID available to your account that supports structured text output. The default is gpt-4.1-mini. Model selection stays in page memory.',
-                  'Enter your OpenAI API key in the password field. It stays in page memory, is used by the Forjex server for generation, and is not saved to storage.',
+                  'Choose OpenAI, OpenRouter, Google Gemini, Grok, Anthropic, or Mistral, then enter a text model ID available to that account. Only OpenAI has a preset default. Switching provider clears the previous key and model. Selection stays in page memory.',
+                  'Enter your selected provider’s API key in the password field. It stays in page memory, is used by the Forjex server for generation, and is not saved to storage.',
                   'Review the generated title and description. Edit them or regenerate before selecting Forge Project Now.',
                   'If setup options change, regenerate or clear the preview. If repository additions change before committing, generate a new preview.',
                   'If AI fails, enter a message manually or clear the message to use the default. A message is used only when setup creates a commit.',
                 ]}
               />
               <p className="mt-4">
-                AI sends a bounded snapshot of planned text additions to OpenAI, with sensitive
-                paths and recognized secrets filtered. Review your code for other confidential
-                content. Usage is billed to your API key. The key is cleared after a successful
-                forge or wizard reset. Cloud cannot see unpushed local changes; use{' '}
+                AI sends a bounded snapshot of planned text additions to the selected provider, with
+                sensitive paths and recognized secrets filtered. Review your code for other
+                confidential content. Usage is billed to your API key. The key is cleared after a
+                successful forge or wizard reset. Cloud cannot see unpushed local changes; use{' '}
                 <code className={inline}>forjex push --ai</code> for those.
               </p>
             </>
@@ -1066,7 +1068,7 @@ export function getDocSections(slug: string): DocSection[] {
                   '--template: nextjs, react, vue, python, go, or rust. If omitted, choose interactively.',
                   '--no-install: skip the npm installation offer for Node starters.',
                   '--no-setup: finish locally without offering GitHub, CI/CD, and deployment.',
-                  '--ai: offer an AI commit message if you continue into GitHub setup. Requires OPENAI_API_KEY in the terminal environment.',
+                  '--ai: offer an AI commit message if you continue into GitHub setup. Run forjex ai configure or set your provider’s key environment variable.',
                 ]}
               />
               <p className="mt-3">
@@ -1124,21 +1126,22 @@ export function getDocSections(slug: string): DocSection[] {
                 filename="Commit and push"
               />
               <p className="mt-4">
-                Run <code className={inline}>forjex ai configure</code> to choose your OpenAI model
-                and optionally save an API key. Saved settings live in{' '}
+                Run <code className={inline}>forjex ai configure</code> to choose your AI provider
+                and model and optionally save an API key. Saved settings live in{' '}
                 <code className={inline}>~/.forjex/ai.json</code>; a saved key is plaintext in a
-                user-only file. Alternatively set <code className={inline}>OPENAI_API_KEY</code> in
-                your terminal environment. Environment variables override saved settings. Optionally
-                set <code className={inline}>FORJEX_AI_MODEL</code> (default: gpt-4.1-mini). Review,
-                edit, or regenerate before committing. Sensitive paths and recognized secrets are
-                filtered from bounded text diffs; review your changes for other confidential
-                content. AI failure leaves manual messages available. Non-interactive commits
-                require staged files and <code className={inline}>--message</code>.
+                user-only file. Alternatively set your selected provider’s API-key environment
+                variable in your terminal. Environment variables override saved settings. Optionally
+                set <code className={inline}>FORJEX_AI_MODEL</code> (OpenAI default: gpt-4.1-mini;
+                other providers need a model ID). Review, edit, or regenerate before committing.
+                Sensitive paths and recognized secrets are filtered from bounded text diffs; review
+                your changes for other confidential content. AI failure leaves manual messages
+                available. Non-interactive commits require staged files and{' '}
+                <code className={inline}>--message</code>.
               </p>
               <p className="mt-4">
                 The cloud wizard also offers AI messages before forging. Connect GitHub and supply
-                your OpenAI model ID and API key in the commit-message panel. The key stays in page
-                memory and is used by our server only for generation; it is not saved. Cloud
+                your AI provider, model ID, and API key in the commit-message panel. The key stays
+                in page memory and is used by our server only for generation; it is not saved. Cloud
                 summarizes its planned additions, while the CLI can summarize your local staged
                 changes.
               </p>
@@ -1154,12 +1157,17 @@ export function getDocSections(slug: string): DocSection[] {
                 code={'forjex ai configure\nforjex ai status\nforjex ai clear'}
                 filename="AI settings"
               />
+              <List
+                items={Object.entries(AI_PROVIDERS).map(
+                  ([id, provider]) =>
+                    `${provider.label}: FORJEX_AI_PROVIDER=${id}, key variable ${provider.keyEnv}.`,
+                )}
+              />
               <p className="mt-4">
-                OpenAI is the supported provider. Configure selects a model and asks before saving a
-                key to a plaintext file with user-only permissions. Status shows the effective model
-                and key source without revealing the key. Clear removes saved AI settings;
-                environment variables still apply. Saving AI settings does not change GitHub or
-                Vercel credentials.
+                Configure selects a provider and model and asks before saving a key to a plaintext
+                file with user-only permissions. Status shows the effective model and key source
+                without revealing the key. Clear removes saved AI settings; environment variables
+                still apply. Saving AI settings does not change GitHub or Vercel credentials.
               </p>
             </>
           ),

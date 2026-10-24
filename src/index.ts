@@ -40,13 +40,13 @@ program
 program
   .command('push')
   .description('Review changes, commit, and push the current branch to its existing remote')
-  .option('--ai', 'Generate a commit message using OpenAI')
+  .option('--ai', 'Generate a commit message using your configured AI provider')
   .option('-m, --message <message>', 'Use your own commit message')
   .action(pushCommand);
 
-const ai = program.command('ai').description('Configure optional OpenAI commit messages');
+const ai = program.command('ai').description('Configure optional AI commit messages');
 ai.command('configure')
-  .description('Choose a model and optionally save an API key')
+  .description('Choose an AI provider and model, and optionally save an API key')
   .action(configureAICommand);
 ai.command('status')
   .description('Show the effective AI settings without exposing the API key')

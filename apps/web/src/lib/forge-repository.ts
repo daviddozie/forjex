@@ -29,6 +29,16 @@ export interface ForgeRepositoryOptions {
 
 export async function forgeRepository(client: Octokit, options: ForgeRepositoryOptions) {
   const connecting = options.repoMode === 'existing';
+  if (!connecting && options.commitPlanHash) {
+    const { data: user } = await client.users.getAuthenticated();
+    const planned = await prepareForgeChanges(client, options, user.login, options.name, 'main');
+    if (options.commitPlanHash !== commitPlanHash(planned.additions, options)) {
+      throw new ForgeRepositoryError(
+        'Repository changes differ from the commit preview. Generate a new message and review again.',
+        409,
+      );
+    }
+  }
   const { data: repository } = connecting
     ? await client.repos.get(parseGitHubRepository(options.existingRepoUrl))
     : await client.repos.createForAuthenticatedUser({
@@ -75,7 +85,11 @@ export async function forgeRepository(client: Octokit, options: ForgeRepositoryO
     repo,
     branch,
   );
-  if (options.commitPlanHash && options.commitPlanHash !== commitPlanHash(additions, options)) {
+  if (
+    connecting &&
+    options.commitPlanHash &&
+    options.commitPlanHash !== commitPlanHash(additions, options)
+  ) {
     throw new ForgeRepositoryError(
       'Repository changes differ from the commit preview. Generate a new message and review again.',
       409,

@@ -1,4 +1,4 @@
-import { validAIModel } from '../../../../../../src/ai/settings';
+import { validAIModel, isAIProvider, AI_PROVIDERS } from '../../../../../../src/ai/settings';
 import { NextResponse } from 'next/server';
 import { Octokit } from '@octokit/rest';
 import { authenticateRequest } from '@/lib/auth';
@@ -26,15 +26,29 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json({ error: 'Invalid project configuration.' }, { status: 400 });
     }
+    const provider = body.provider ?? process.env.FORJEX_AI_PROVIDER ?? 'openai';
+    if (!isAIProvider(provider))
+      return NextResponse.json({ error: 'Unsupported AI provider.' }, { status: 400 });
+    const model =
+      body.model ||
+      (provider === (process.env.FORJEX_AI_PROVIDER || 'openai')
+        ? process.env.FORJEX_AI_MODEL
+        : '') ||
+      AI_PROVIDERS[provider].defaultModel;
+    if (!validAIModel(model))
+      return NextResponse.json(
+        { error: 'Enter a valid model ID for the selected provider.' },
+        { status: 400 },
+      );
     // Bring your own key: no shared billing endpoint or persisted browser credentials.
     if (typeof body.apiKey !== 'string' || !body.apiKey.trim() || body.apiKey.length > 512) {
       return NextResponse.json(
-        { error: 'Enter your OpenAI API key. It is used for this request only.' },
+        {
+          error: `Enter your ${AI_PROVIDERS[provider].label} API key. It is used for this request only.`,
+        },
         { status: 400 },
       );
     }
-    if (body.model !== undefined && !validAIModel(body.model))
-      return NextResponse.json({ error: 'Enter a valid OpenAI model ID.' }, { status: 400 });
     const options: ForgeRepositoryOptions = {
       repoMode: body.repoMode,
       existingRepoUrl: body.existingRepoUrl,
@@ -79,7 +93,7 @@ export async function POST(request: Request) {
         content: file.content,
         binary: file.encoding === 'base64',
       })),
-      { apiKey: body.apiKey, model: body.model || process.env.FORJEX_AI_MODEL },
+      { apiKey: body.apiKey, provider, model },
     );
     return NextResponse.json(
       { ...generated, commitPlanHash: commitPlanHash(additions, options) },
