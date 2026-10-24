@@ -63,7 +63,7 @@
     "@next/eslint-plugin-next": "^15.5.28",
     "@types/figlet": "^1.7.0",
     "@types/inquirer": "^9.0.9",
-    "@types/node": "^24.10.1",
+    "@types/node": "^26.6.5",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^16.5.0",
