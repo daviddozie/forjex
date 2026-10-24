@@ -69,7 +69,7 @@ export const DOC_PAGES: DocLink[] = [
     title: 'GitHub repositories',
     description: 'Create a repository or connect an existing one.',
     group: 'Build & ship',
-    keywords: 'git commit push smart messages',
+    keywords: 'git commit push smart messages AI OpenAI',
   },
   {
     slug: 'ci-cd',
@@ -90,12 +90,13 @@ export const DOC_PAGES: DocLink[] = [
     title: 'Browser wizard',
     description: 'Create and connect repositories from the Forjex website.',
     group: 'Build & ship',
-    keywords: 'cloud demo preview templates dashboard',
+    keywords: 'cloud demo preview templates dashboard AI commit messages OpenAI API key',
   },
   {
     slug: 'cli',
     title: 'CLI reference',
     description: 'Commands, arguments, and supported options.',
+    keywords: 'create forge push AI commit message no-setup OPENAI_API_KEY FORJEX_AI_MODEL',
     group: 'Reference',
   },
   {

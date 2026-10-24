@@ -2,7 +2,7 @@ import simpleGit, { SimpleGit } from 'simple-git';
 import { execSync } from 'child_process';
 import { logger } from '../utils/logger.js';
 import { writeFileSync, existsSync } from 'fs';
-import { CommitMessageGenerator } from './commit-generator.js';
+import { CommitMessageGenerator, type CommitOptions } from './commit-generator.js';
 import chalk from 'chalk';
 import type { ProjectConfig } from '../types/index.js';
 
@@ -12,7 +12,7 @@ export class GitService {
 
   constructor(workingDir: string = process.cwd()) {
     this.git = simpleGit(workingDir);
-    this.commitGenerator = new CommitMessageGenerator();
+    this.commitGenerator = new CommitMessageGenerator(workingDir);
   }
 
   createLocalFiles(options: { readme?: boolean; gitignore?: string; license?: string }): void {
@@ -103,7 +103,11 @@ export class GitService {
     }
   }
 
-  async initAndPush(repoUrl: string, isExistingRepo: boolean = false): Promise<void> {
+  async initAndPush(
+    repoUrl: string,
+    isExistingRepo: boolean = false,
+    options: CommitOptions = {},
+  ): Promise<void> {
     const spinner = logger.spinner('⚙️  Initializing git repository...');
 
     try {
@@ -148,7 +152,7 @@ export class GitService {
 
         spinner.stop();
 
-        const commitMessage = await this.commitGenerator.generateCommitMessage();
+        const commitMessage = await this.commitGenerator.generateCommitMessage(options);
 
         console.log(chalk.gray('\n  📝 Commit message: ') + chalk.cyan(`"${commitMessage}"`));
         console.log('');
@@ -176,7 +180,10 @@ export class GitService {
         await this.git.add('.');
 
         spinner.text = '💾 Creating initial commit...';
-        await this.git.commit('Initial commit from Forjex');
+        spinner.stop();
+        const commitMessage = await this.commitGenerator.generateCommitMessage(options);
+        spinner.start('💾 Creating initial commit...');
+        await this.git.commit(commitMessage);
 
         spinner.text = '🚀 Pushing to GitHub...';
         await this.git.addRemote('origin', repoUrl);

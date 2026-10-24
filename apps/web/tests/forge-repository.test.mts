@@ -223,3 +223,66 @@ test('connecting never replaces a source file used as a configuration parent dir
   );
   assert.deepEqual(writes(calls), []);
 });
+
+test('a reviewed custom commit message is used without changing commit ancestry', async () => {
+  const { client, calls } = github();
+  await forgeRepository(client, {
+    ...options,
+    commitMessage: 'ci: add verified pipeline\n\nConfigure checks on the default branch.',
+  });
+  const commit = calls.find((call) => call.path.endsWith('/git/commits'))!;
+  assert.equal(
+    commit.body.message,
+    'ci: add verified pipeline\n\nConfigure checks on the default branch.',
+  );
+  assert.deepEqual(commit.body.parents, ['head-before']);
+});
+
+test('cloud preview reads only and refuses to commit if planned additions changed', async () => {
+  const { prepareForgeChanges, commitPlanHash } = await import('../src/lib/forge-repository');
+  const initial = github();
+  const plan = await prepareForgeChanges(
+    initial.client,
+    options,
+    'team',
+    'existing-app',
+    'release/v1',
+  );
+  assert.deepEqual(writes(initial.calls), []);
+  const hash = commitPlanHash(plan.additions, options);
+  const changed = github({ files: ['vercel.json'] });
+  await assert.rejects(
+    forgeRepository(changed.client, {
+      ...options,
+      commitMessage: 'ci: configure project',
+      commitPlanHash: hash,
+    }),
+    (error: any) => error.status === 409,
+  );
+  assert.deepEqual(writes(changed.calls), []);
+  await forgeRepository(initial.client, {
+    ...options,
+    commitMessage: 'ci: configure project',
+    commitPlanHash: hash,
+  });
+  assert.equal(
+    initial.calls.find((call) => call.path.endsWith('/git/commits'))!.body.message,
+    'ci: configure project',
+  );
+});
+
+test('new project AI previews allow GitHub to assign the default branch without changing the planned file set', async () => {
+  const { prepareForgeChanges, commitPlanHash } = await import('../src/lib/forge-repository');
+  const { client } = github();
+  const settings = { ...options, repoMode: 'new' as const, name: 'existing-app' };
+  const preview = await prepareForgeChanges(client, settings, 'team', 'existing-app', 'main');
+  const actual = await prepareForgeChanges(client, settings, 'team', 'existing-app', 'release/v1');
+  assert.equal(
+    commitPlanHash(preview.additions, settings),
+    commitPlanHash(actual.additions, settings),
+  );
+  assert.notEqual(
+    commitPlanHash(preview.additions.slice(1), settings),
+    commitPlanHash(actual.additions, settings),
+  );
+});

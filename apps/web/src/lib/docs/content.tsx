@@ -189,7 +189,9 @@ function frameworkSections(framework: FrameworkGuide): DocSection[] {
             </p>
             <p className="text-xs">
               The package-manager buttons select how you run Forjex. Node starter dependencies are
-              installed with npm by the CLI.
+              installed with npm by the CLI. After creation, interactive mode offers to continue
+              into GitHub, optional CI/CD, and deployment. Choose No or use --no-setup to finish
+              locally.
             </p>
           </Step>
           <Step
@@ -209,9 +211,9 @@ function frameworkSections(framework: FrameworkGuide): DocSection[] {
             )}
             <p>
               {framework.template === 'nextjs'
-                ? 'Open the local URL printed by Next.js, normally http://localhost:3000. You will see the starter homepage with your project name.'
+                ? 'Open the local URL printed by Next.js, normally http://localhost:3000. You will see the Forjex welcome page with a rotating logo. Open /docs for the generated file guide.'
                 : framework.template === 'react' || framework.template === 'vue'
-                  ? 'Open the local URL printed by Vite, normally http://localhost:5173. You will see the starter homepage with your project name.'
+                  ? 'Open the local URL printed by Vite, normally http://localhost:5173. You will see the Forjex welcome page with a rotating logo. Open /docs for the generated file guide.'
                   : framework.template === 'python'
                     ? 'Open http://127.0.0.1:8000 for the API response, or http://127.0.0.1:8000/docs for interactive API documentation.'
                     : framework.template === 'go'
@@ -259,7 +261,7 @@ function frameworkSections(framework: FrameworkGuide): DocSection[] {
             This is the complete default local file tree before installing dependencies. It includes
             the README and a language-specific <code className={inline}>.gitignore</code>.{' '}
             {frontend
-              ? 'The Forjex mark is only in the favicon assets. There is no dedicated logo component. Styles use shared CSS with design tokens.'
+              ? 'The welcome page introduces Forjex with a pearl-white logo and a perspective-based rotation. Reduced-motion preferences disable the animation. The /docs page explains the generated files, commands, and deployment workflow. Styles use shared CSS with design tokens.'
               : framework.template === 'rust'
                 ? 'This is a minimal Rust application, not an Axum service.'
                 : framework.template === 'go'
@@ -329,9 +331,10 @@ function frameworkSections(framework: FrameworkGuide): DocSection[] {
       content: (
         <>
           <p>
-            When you are ready, run <code className={inline}>npx forjex forge</code> from the
-            generated project folder and choose the existing-project path. You can create a GitHub
-            repository, add CI/CD, and push your code.
+            Creation offers to continue into GitHub, optional CI/CD, and deployment. To continue
+            later, run <code className={inline}>npx forjex forge</code> from the generated project
+            folder and choose the existing-project path. You can create a GitHub repository, add
+            CI/CD, and push your code.
           </p>
           <p className="mt-3">
             {frontend
@@ -668,9 +671,10 @@ export function getDocSections(slug: string): DocSection[] {
           content: (
             <>
               <p>
-                The CLI checks the build before pushing. New repository setup creates an initial
-                commit. Existing repository setup analyzes changes to suggest a conventional commit
-                message.
+                During repository setup, the CLI checks the build when a build command and the
+                required dependencies are available. A new frontend starter without installed
+                dependencies reports that local build verification was skipped. Commit messages can
+                be reviewed and edited before the setup commits and pushes your files.
               </p>
               <div className="mt-4">
                 <CodeBlock
@@ -684,8 +688,25 @@ export function getDocSections(slug: string): DocSection[] {
               <p className="mt-4">
                 Check <code className={inline}>git status</code> and your{' '}
                 <code className={inline}>.gitignore</code> before the operation. The CLI stages
-                files from the project directory.
+                files from the project directory during setup. For later changes, use the dedicated
+                push command, which preserves existing staged selections and pushes the current
+                branch.
               </p>
+              <CodeBlock
+                code={
+                  'forjex ai configure\nforjex push --ai\nforjex push -m "feat: add project search"'
+                }
+                filename="Later commits"
+              />
+              <p className="mt-4">
+                Set <code className={inline}>OPENAI_API_KEY</code> in your terminal environment to
+                generate a message from staged text changes. Accept, edit, regenerate, or cancel
+                before committing. Existing commits keep their messages. The push command does not
+                run build checks; run your project checks before pushing.
+              </p>
+              <Link href="/docs/cli#push" className={link}>
+                Read the push and AI reference →
+              </Link>
             </>
           ),
         },
@@ -937,6 +958,36 @@ export function getDocSections(slug: string): DocSection[] {
           ),
         },
         {
+          id: 'ai-commit-messages',
+          title: 'Review an AI commit message',
+          content: (
+            <>
+              <p>
+                In the Pipelines step, use the optional commit-message editor to write a message
+                manually or choose <strong>Generate with AI</strong>. AI generation requires a
+                connected GitHub account, an OpenAI model ID, and your API key. Generation previews
+                the planned starter or configuration additions without writing to GitHub.
+              </p>
+              <List
+                items={[
+                  'Choose an OpenAI model ID available to your account that supports structured text output. The default is gpt-4.1-mini. Model selection stays in page memory.',
+                  'Enter your OpenAI API key in the password field. It stays in page memory, is used by the Forjex server for generation, and is not saved to storage.',
+                  'Review the generated title and description. Edit them or regenerate before selecting Forge Project Now.',
+                  'If setup options change, regenerate or clear the preview. If repository additions change before committing, generate a new preview.',
+                  'If AI fails, enter a message manually or clear the message to use the default. A message is used only when setup creates a commit.',
+                ]}
+              />
+              <p className="mt-4">
+                AI sends a bounded snapshot of planned text additions to OpenAI, with sensitive
+                paths and recognized secrets filtered. Review your code for other confidential
+                content. Usage is billed to your API key. The key is cleared after a successful
+                forge or wizard reset. Cloud cannot see unpushed local changes; use{' '}
+                <code className={inline}>forjex push --ai</code> for those.
+              </p>
+            </>
+          ),
+        },
+        {
           id: 'connect-existing',
           title: 'Connect an existing repository',
           content: (
@@ -997,11 +1048,14 @@ export function getDocSections(slug: string): DocSection[] {
           title: 'create',
           content: (
             <>
-              <p>Create a local starter. No provider login is required.</p>
+              <p>
+                Create a local starter without provider login, then optionally continue into GitHub,
+                CI/CD, and deployment. Non-interactive creation finishes locally.
+              </p>
               <div className="mt-4">
                 <CodeBlock
                   code={
-                    'forjex create [name] --template <template> [--no-install]\n\nforjex create my-app --template nextjs\nforjex create my-api --template python --no-install'
+                    'forjex create [name] --template <template> [--no-install] [--no-setup] [--ai]\n\nforjex create my-app --template nextjs\nforjex create my-api --template python --no-install'
                   }
                   filename="Usage"
                 />
@@ -1011,6 +1065,8 @@ export function getDocSections(slug: string): DocSection[] {
                   'name: a new folder name. If omitted, the CLI asks for it.',
                   '--template: nextjs, react, vue, python, go, or rust. If omitted, choose interactively.',
                   '--no-install: skip the npm installation offer for Node starters.',
+                  '--no-setup: finish locally without offering GitHub, CI/CD, and deployment.',
+                  '--ai: offer an AI commit message if you continue into GitHub setup. Requires OPENAI_API_KEY in the terminal environment.',
                 ]}
               />
               <p className="mt-3">
@@ -1034,7 +1090,7 @@ export function getDocSections(slug: string): DocSection[] {
               <div className="mt-4">
                 <CodeBlock
                   code={
-                    'forjex forge [name] [--template <template>] [--no-install] [--ci] [--vercel]\n\nforjex forge\nforjex forge my-app --template react --ci --vercel'
+                    'forjex forge [name] [--template <template>] [--no-install] [--ci] [--vercel] [--ai]\n\nforjex forge\nforjex forge my-app --template react --ci --vercel'
                   }
                   filename="Usage"
                 />
@@ -1048,6 +1104,63 @@ export function getDocSections(slug: string): DocSection[] {
                   'After generating a starter, GitHub setup is optional. These flags do not publish without the interactive setup.',
                 ]}
               />
+            </>
+          ),
+        },
+        {
+          id: 'push',
+          title: 'push and AI commit messages',
+          content: (
+            <>
+              <p>
+                Commit staged changes and push the current branch to its existing origin. If nothing
+                is staged, interactive mode offers to stage the changes shown. Existing commits keep
+                their messages.
+              </p>
+              <CodeBlock
+                code={
+                  'forjex ai configure\nforjex push --ai\nforjex push -m "feat: add project search"'
+                }
+                filename="Commit and push"
+              />
+              <p className="mt-4">
+                Run <code className={inline}>forjex ai configure</code> to choose your OpenAI model
+                and optionally save an API key. Saved settings live in{' '}
+                <code className={inline}>~/.forjex/ai.json</code>; a saved key is plaintext in a
+                user-only file. Alternatively set <code className={inline}>OPENAI_API_KEY</code> in
+                your terminal environment. Environment variables override saved settings. Optionally
+                set <code className={inline}>FORJEX_AI_MODEL</code> (default: gpt-4.1-mini). Review,
+                edit, or regenerate before committing. Sensitive paths and recognized secrets are
+                filtered from bounded text diffs; review your changes for other confidential
+                content. AI failure leaves manual messages available. Non-interactive commits
+                require staged files and <code className={inline}>--message</code>.
+              </p>
+              <p className="mt-4">
+                The cloud wizard also offers AI messages before forging. Connect GitHub and supply
+                your OpenAI model ID and API key in the commit-message panel. The key stays in page
+                memory and is used by our server only for generation; it is not saved. Cloud
+                summarizes its planned additions, while the CLI can summarize your local staged
+                changes.
+              </p>
+            </>
+          ),
+        },
+        {
+          id: 'ai-configuration',
+          title: 'AI configuration',
+          content: (
+            <>
+              <CodeBlock
+                code={'forjex ai configure\nforjex ai status\nforjex ai clear'}
+                filename="AI settings"
+              />
+              <p className="mt-4">
+                OpenAI is the supported provider. Configure selects a model and asks before saving a
+                key to a plaintext file with user-only permissions. Status shows the effective model
+                and key source without revealing the key. Clear removes saved AI settings;
+                environment variables still apply. Saving AI settings does not change GitHub or
+                Vercel credentials.
+              </p>
             </>
           ),
         },
@@ -1204,8 +1317,9 @@ export function getDocSections(slug: string): DocSection[] {
                 outside Forjex is not automatically a saved Forjex project.
               </p>
               <p className="mt-3">
-                A local starter created with <code className={inline}>forjex create</code> is local
-                only. It does not create a dashboard record.
+                A local starter created with <code className={inline}>forjex create</code> stays
+                local unless you continue into GitHub setup. Local creation alone does not create a
+                dashboard record.
               </p>
             </>
           ),

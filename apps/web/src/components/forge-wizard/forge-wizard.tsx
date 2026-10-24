@@ -1,5 +1,7 @@
 'use client';
 
+import { DEFAULT_AI_MODEL, validAIModel } from '../../../../../src/ai/settings';
+
 import { ForjexIcon } from '@/components/ui/forjex-icon';
 import { CodeSnippet } from '@/components/ui/code-snippet';
 import * as React from 'react';
@@ -114,6 +116,27 @@ export function ForgeWizard() {
   const [addCICD, setAddCICD] = React.useState(true);
   const [deployVercel, setDeployVercel] = React.useState(true);
   const [existingRepoUrl, setExistingRepoUrl] = React.useState('');
+  const [commitMessage, setCommitMessage] = React.useState('');
+  const [aiKey, setAiKey] = React.useState('');
+  const [aiModel, setAiModel] = React.useState<string>(DEFAULT_AI_MODEL);
+  const [generatingMessage, setGeneratingMessage] = React.useState(false);
+  const [messageError, setMessageError] = React.useState<string | null>(null);
+  const [commitPreview, setCommitPreview] = React.useState<{
+    key: string;
+    hash: string;
+    included: string[];
+    omitted: string[];
+  } | null>(null);
+  const commitConfiguration = JSON.stringify({
+    repoMode,
+    repoName,
+    existingRepoUrl,
+    addReadme,
+    template: selectedTemplate.id,
+    addCICD,
+    deployVercel,
+  });
+  const previewStale = Boolean(commitPreview && commitPreview.key !== commitConfiguration);
 
   const existingRepo = React.useMemo(() => {
     try {
@@ -167,7 +190,50 @@ export function ForgeWizard() {
     checkAuth();
   }, [checkAuth]);
 
+  const generateMessage = async () => {
+    setGeneratingMessage(true);
+    setMessageError(null);
+    const key = commitConfiguration;
+    try {
+      const response = await fetch('/api/commit-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: targetName,
+          repoMode,
+          existingRepoUrl,
+          addReadme,
+          isPrivate,
+          template: selectedTemplate.id,
+          addCICD,
+          deployVercel,
+          apiKey: aiKey,
+          model: aiModel.trim(),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Message generation failed.');
+      setCommitMessage(data.message);
+      setCommitPreview({
+        key,
+        hash: data.commitPlanHash,
+        included: data.included,
+        omitted: data.omitted,
+      });
+    } catch (error) {
+      setMessageError(
+        error instanceof Error
+          ? error.message
+          : 'Could not generate a message. Enter one manually.',
+      );
+    } finally {
+      setGeneratingMessage(false);
+    }
+  };
+
   const runForgeProcess = async () => {
+    if (generatingMessage || previewStale) return;
+
     setStep('running');
     setForgeError(null);
     setExecutionLogs([
@@ -187,6 +253,8 @@ export function ForgeWizard() {
           template: selectedTemplate.id,
           addCICD,
           deployVercel,
+          commitMessage: commitMessage.trim() || undefined,
+          commitPlanHash: commitPreview?.hash,
         }),
       });
 
@@ -210,6 +278,7 @@ export function ForgeWizard() {
         action: data.action,
       });
 
+      setAiKey('');
       setStep('success');
 
       try {
@@ -236,6 +305,10 @@ export function ForgeWizard() {
     setForgeResult(null);
     setForgeError(null);
     setExecutionLogs([]);
+    setCommitMessage('');
+    setCommitPreview(null);
+    setAiKey('');
+    setMessageError(null);
   };
 
   return (
@@ -613,6 +686,119 @@ export function ForgeWizard() {
               </div>
             </div>
 
+            <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 space-y-3">
+              <div>
+                <h4 className="text-sm font-semibold">Commit message</h4>
+                <p className="text-xs text-neutral-500 mt-1">
+                  Write your own message or let AI summarize the files this setup will add. Review
+                  and edit it before forging.
+                </p>
+              </div>
+              <label htmlFor="commit-message" className="block text-xs font-medium">
+                Message (optional)
+              </label>
+              <textarea
+                id="commit-message"
+                value={commitMessage}
+                maxLength={4000}
+                onChange={(event) => setCommitMessage(event.target.value)}
+                rows={4}
+                placeholder={
+                  repoMode === 'new'
+                    ? 'feat: bootstrap project with Forjex'
+                    : 'chore: configure repository with Forjex'
+                }
+                className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent p-3 text-sm font-mono"
+              />
+              <p className="text-xs text-neutral-500">AI provider: OpenAI</p>
+              <label htmlFor="ai-model" className="block text-xs font-medium">
+                Model ID
+              </label>
+              <input
+                id="ai-model"
+                value={aiModel}
+                onChange={(event) => setAiModel(event.target.value)}
+                maxLength={128}
+                spellCheck={false}
+                placeholder={DEFAULT_AI_MODEL}
+                className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent p-2 text-sm"
+              />
+              <p className="text-xs text-neutral-500">
+                Use a model available to your OpenAI account that supports structured text output.
+                Model and key stay in page memory.
+              </p>
+              <label htmlFor="ai-key" className="block text-xs font-medium">
+                OpenAI API key for optional AI generation
+              </label>
+              <input
+                id="ai-key"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                value={aiKey}
+                onChange={(event) => setAiKey(event.target.value)}
+                placeholder="sk-…"
+                className="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent p-2 text-sm"
+              />
+              <p className="text-xs text-neutral-500">
+                Generate sends a bounded, filtered snapshot of the planned text changes to OpenAI
+                through our server. Sensitive paths and recognized secrets are filtered; review your
+                code for other confidential content. Your key stays in memory and is not saved.
+                Cloud can summarize the changes it prepares, not unpushed files on your computer.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    generatingMessage ||
+                    !aiKey.trim() ||
+                    !validAIModel(aiModel.trim()) ||
+                    !authStatus.github
+                  }
+                  onClick={generateMessage}
+                  className="gap-2"
+                >
+                  {generatingMessage ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  {commitPreview ? 'Regenerate message' : 'Generate with AI'}
+                </Button>
+                {commitPreview && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setCommitPreview(null);
+                      setCommitMessage('');
+                      setMessageError(null);
+                    }}
+                  >
+                    Clear preview
+                  </Button>
+                )}
+              </div>
+              {!authStatus.github && (
+                <p className="text-xs text-neutral-500">Connect GitHub to enable AI generation.</p>
+              )}
+              {commitPreview && (
+                <p className="text-xs text-neutral-500">
+                  Summarized {commitPreview.included.length} text files; excluded{' '}
+                  {commitPreview.omitted.length} files.{' '}
+                  {previewStale
+                    ? 'Setup changed. Regenerate or clear this preview before continuing.'
+                    : 'Review the message above, then forge when ready.'}
+                </p>
+              )}
+              {messageError && (
+                <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+                  {messageError}
+                </p>
+              )}
+            </div>
+
             <div
               className={cn(
                 'p-4 rounded-lg border text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3',
@@ -717,6 +903,7 @@ export function ForgeWizard() {
               <span>Back</span>
             </Button>
             <Button
+              disabled={generatingMessage || previewStale}
               onClick={runForgeProcess}
               className="gap-2 bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 shadow-lg font-semibold"
             >

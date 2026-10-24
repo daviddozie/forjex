@@ -26,7 +26,7 @@ export function getFoundationFiles(framework: string, name: string): TemplateFil
     },
     {
       path: 'src/config/site.ts',
-      content: `export const siteConfig = {\n  name: ${title},\n  description: 'A focused foundation for your next application.',\n} as const;\n`,
+      content: `export const siteConfig = {\n  name: ${title},\n  description: 'Forjex gives your next idea a thoughtful foundation, from local development to deployment.',\n} as const;\n`,
     },
     {
       path: 'src/config/env.ts',
@@ -34,7 +34,7 @@ export function getFoundationFiles(framework: string, name: string): TemplateFil
     },
     {
       path: 'src/constants/routes.ts',
-      content: `export const routes = {\n  home: '/',\n  gettingStarted: '/#getting-started',\n  workspace: '/#workspace',\n} as const;\n`,
+      content: `export const routes = {\n  home: '/',\n  gettingStarted: '/#getting-started',\n  workspace: '/#workspace',\n  docs: '/docs',\n} as const;\n`,
     },
     {
       path: 'src/types/navigation.ts',
@@ -125,5 +125,24 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; color: #dbeafe; fon
 .site-footer { padding-block: 28px; border-top: 1px solid var(--border); color: var(--muted); font-size: .75rem; }
 .state { min-height: 60vh; display: grid; align-content: center; justify-items: start; gap: 16px; }
 .skeleton { width: 60%; height: 32px; border-radius: 8px; background: var(--border); }
+.hero { display: grid; grid-template-columns: 1.4fr 1fr; align-items: center; gap: 48px; }
+.hero h1 { font-size: clamp(2.75rem, 5.7vw, 4.7rem); }
+.hero h1 span { color: #ecece8; }
+.hero .button { display: inline-flex; margin-top: 16px; }
+.logo-stage { min-height: 340px; display: grid; place-items: center; perspective: 900px; position: relative; background: radial-gradient(ellipse, #f5f5ef0a, transparent 68%); }
+.logo-orbit { transform-style: preserve-3d; animation: forge-orbit 16s linear infinite; }
+.hero-logo { width: clamp(160px, 24vw, 260px); height: auto; color: #ecece8; filter: drop-shadow(0 18px 35px #f5f5ef24); }
+.logo-caption { position: absolute; bottom: 12px; color: var(--muted); font-size: .55rem; letter-spacing: .14em; text-align: center; }
+@keyframes forge-orbit { from { transform: rotateX(-14deg) rotateY(0deg); } to { transform: rotateX(-14deg) rotateY(360deg); } }
+.docs-intro { max-width: 700px; margin-bottom: 48px; }
+.docs-layout { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 40px; }
+.docs-layout aside { display: grid; align-content: start; gap: 16px; font-size: .8rem; position: sticky; top: 24px; height: fit-content; }
+.docs-section { scroll-margin-top: 24px; margin-bottom: 48px; }
+.docs-section h2 { font-size: 1.4rem; }
+.file-guide { margin: 0; }
+.file-guide div { padding: 20px 0; border-bottom: 1px solid var(--border); }
+.file-guide dd { margin: 8px 0 0; color: var(--muted); font-size: .85rem; line-height: 1.7; }
+@media (prefers-reduced-motion: reduce) { .logo-orbit { animation: none; transform: rotateX(-14deg) rotateY(-20deg); } }
+@media (max-width: 800px) { .hero { grid-template-columns: 1fr; gap: 24px; } .logo-stage { min-height: 260px; } .docs-layout { grid-template-columns: 1fr; } .docs-layout aside { position: static; display: flex; flex-wrap: wrap; } }
 @media (max-width: 600px) { .site-header { align-items: flex-start; padding-block: 24px; flex-direction: column; } main { padding-block: 48px; } }
 `;

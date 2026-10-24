@@ -231,3 +231,21 @@ test('existing-repository demo takes its name from the supplied URL', async () =
   assert.equal(result.mode, 'simulation');
   assert.equal(result.repository.url, null);
 });
+
+test('AI generation rejects anonymous requests without calling a provider', async () => {
+  const { POST } = await import('../src/app/api/commit-message/route');
+  const response = await POST(
+    new Request('https://forjex.test/api/commit-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: 'must-not-be-used',
+        repoMode: 'new',
+        name: 'demo',
+        template: 'nextjs',
+      }),
+    }),
+  );
+  assert.equal(response.status, 401);
+  assert.ok(!(await response.text()).includes('must-not-be-used'));
+});

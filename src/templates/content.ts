@@ -286,6 +286,7 @@ export function getVercelConfigContent(framework: string, _projectName: string):
           : undefined,
       buildCommand: 'npm run build',
       outputDirectory: 'dist',
+      rewrites: [{ source: '/docs', destination: '/index.html' }],
     },
     null,
     2,

@@ -305,7 +305,7 @@ export function CodeSnippet({
                         onClick={() => select(tab.id)}
                         onKeyDown={(e) => handleKeyDown(e, index)}
                         className={cn(
-                          'rounded-md px-2.5 py-1 font-mono text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400',
+                          'cursor-pointer rounded-md px-2.5 py-1 font-mono text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400',
                           isSelected
                             ? 'bg-zinc-800 text-zinc-100 shadow-xs'
                             : 'text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200',
@@ -337,7 +337,7 @@ export function CodeSnippet({
                       onClick={() => select(tab.id)}
                       onKeyDown={(e) => handleKeyDown(e, index)}
                       className={cn(
-                        'flex items-center gap-1.5 rounded-md px-2.5 py-1 font-mono text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400',
+                        'flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 font-mono text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400',
                         isSelected
                           ? 'bg-zinc-800 text-zinc-100 shadow-xs'
                           : 'text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200',
@@ -373,7 +373,7 @@ export function CodeSnippet({
             onClick={copy}
             aria-label={copyState === 'copied' ? 'Code copied' : 'Copy code'}
             title={copyState === 'copied' ? 'Copied' : 'Copy code'}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400"
+            className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-zinc-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400"
           >
             {copyState === 'copied' ? (
               <Check aria-hidden="true" className="h-3.5 w-3.5 text-emerald-400" />

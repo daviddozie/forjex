@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { validateCommitMessage } from '../../../../src/ai/commit-message';
 import type { Octokit } from '@octokit/rest';
 import {
   getCICDWorkflowContent,
@@ -21,6 +23,8 @@ export interface ForgeRepositoryOptions {
   addReadme: boolean;
   addCICD: boolean;
   deployVercel: boolean;
+  commitMessage?: string;
+  commitPlanHash?: string;
 }
 
 export async function forgeRepository(client: Octokit, options: ForgeRepositoryOptions) {
@@ -64,6 +68,114 @@ export async function forgeRepository(client: Octokit, options: ForgeRepositoryO
       409,
     );
 
+  const { additions, skippedFiles } = await prepareForgeChanges(
+    client,
+    options,
+    owner,
+    repo,
+    branch,
+  );
+  if (options.commitPlanHash && options.commitPlanHash !== commitPlanHash(additions, options)) {
+    throw new ForgeRepositoryError(
+      'Repository changes differ from the commit preview. Generate a new message and review again.',
+      409,
+    );
+  }
+  const removeReadme = !connecting && !options.addReadme;
+  if (additions.length || removeReadme) {
+    const { data: parent } = await client.git.getCommit({ owner, repo, commit_sha: head });
+    const tree = await Promise.all(
+      additions.map(async (file) => {
+        const entry = { path: file.path, mode: '100644' as const, type: 'blob' as const };
+        if (file.encoding === 'base64') {
+          const { data: blob } = await client.git.createBlob({
+            owner,
+            repo,
+            content: file.content,
+            encoding: 'base64',
+          });
+          return { ...entry, sha: blob.sha };
+        }
+        return { ...entry, content: file.content };
+      }),
+    );
+    const { data: createdTree } = await client.git.createTree({
+      owner,
+      repo,
+      base_tree: parent.tree.sha,
+      tree: [
+        ...tree,
+        ...(removeReadme
+          ? [{ path: 'README.md', mode: '100644' as const, type: 'blob' as const, sha: null }]
+          : []),
+      ],
+    });
+    const { data: commit } = await client.git.createCommit({
+      owner,
+      repo,
+      message: options.commitMessage
+        ? validateCommitMessage(options.commitMessage)
+        : connecting
+          ? 'chore: configure repository with Forjex'
+          : 'feat: bootstrap project with Forjex',
+      tree: createdTree.sha,
+      parents: [head],
+    });
+    await client.git.updateRef({
+      owner,
+      repo,
+      ref: `heads/${branch}`,
+      sha: commit.sha,
+      force: false,
+    });
+    head = commit.sha;
+  }
+  return {
+    repository,
+    branch,
+    sha: head,
+    skippedFiles,
+    changedFiles: additions.map((file) => file.path),
+    action: connecting ? ('connected' as const) : ('created' as const),
+  };
+}
+
+export function commitPlanHash(files: TemplateFile[], options: ForgeRepositoryOptions): string {
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        // A new repository's default branch is assigned by GitHub at creation time.
+        // Bind that one workflow value symbolically in a read-only preview.
+        files:
+          options.repoMode === 'new'
+            ? files.map((file) =>
+                file.path === '.github/workflows/ci.yml'
+                  ? {
+                      ...file,
+                      content: getCICDWorkflowContent(options.template, '<default-branch>'),
+                    }
+                  : file,
+              )
+            : files,
+        mode: options.repoMode,
+        repo:
+          options.repoMode === 'existing'
+            ? parseGitHubRepository(options.existingRepoUrl)
+            : options.name,
+        addReadme: options.addReadme,
+      }),
+    )
+    .digest('hex');
+}
+
+export async function prepareForgeChanges(
+  client: Octokit,
+  options: ForgeRepositoryOptions,
+  owner: string,
+  repo: string,
+  branch: string,
+) {
+  const connecting = options.repoMode === 'existing';
   const files: TemplateFile[] = [];
   if (!connecting) {
     files.push(
@@ -122,59 +234,5 @@ export async function forgeRepository(client: Octokit, options: ForgeRepositoryO
     additions.push(file);
   }
 
-  const removeReadme = !connecting && !options.addReadme;
-  if (additions.length || removeReadme) {
-    const { data: parent } = await client.git.getCommit({ owner, repo, commit_sha: head });
-    const tree = await Promise.all(
-      additions.map(async (file) => {
-        const entry = { path: file.path, mode: '100644' as const, type: 'blob' as const };
-        if (file.encoding === 'base64') {
-          const { data: blob } = await client.git.createBlob({
-            owner,
-            repo,
-            content: file.content,
-            encoding: 'base64',
-          });
-          return { ...entry, sha: blob.sha };
-        }
-        return { ...entry, content: file.content };
-      }),
-    );
-    const { data: createdTree } = await client.git.createTree({
-      owner,
-      repo,
-      base_tree: parent.tree.sha,
-      tree: [
-        ...tree,
-        ...(removeReadme
-          ? [{ path: 'README.md', mode: '100644' as const, type: 'blob' as const, sha: null }]
-          : []),
-      ],
-    });
-    const { data: commit } = await client.git.createCommit({
-      owner,
-      repo,
-      message: connecting
-        ? 'chore: configure repository with Forjex'
-        : 'feat: bootstrap project with Forjex',
-      tree: createdTree.sha,
-      parents: [head],
-    });
-    await client.git.updateRef({
-      owner,
-      repo,
-      ref: `heads/${branch}`,
-      sha: commit.sha,
-      force: false,
-    });
-    head = commit.sha;
-  }
-  return {
-    repository,
-    branch,
-    sha: head,
-    skippedFiles,
-    changedFiles: additions.map((file) => file.path),
-    action: connecting ? ('connected' as const) : ('created' as const),
-  };
+  return { additions, skippedFiles };
 }
