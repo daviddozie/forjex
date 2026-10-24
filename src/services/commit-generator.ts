@@ -1,224 +1,159 @@
-import { execSync } from 'child_process';
+import { AI_PROVIDERS, DEFAULT_AI_MODEL } from '../ai/settings.js';
+import { resolveAIConfig } from '../utils/ai-config.js';
+import simpleGit from 'simple-git';
+import inquirer from 'inquirer';
 import { logger } from '../utils/logger.js';
+import {
+  generateAICommitMessage,
+  isSensitivePath,
+  validateCommitMessage,
+  type CommitChange,
+} from '../ai/commit-message.js';
 
-interface FileChange {
-  file: string;
-  added: string[];
-  removed: string[];
-  modified: string[];
+export interface CommitOptions {
+  ai?: boolean;
+  message?: string;
+}
+
+export async function stagedChanges(directory = process.cwd()): Promise<CommitChange[]> {
+  const git = simpleGit(directory);
+  const names = (await git.raw(['diff', '--cached', '--name-only', '-z']))
+    .split('\0')
+    .filter(Boolean);
+  return Promise.all(
+    names.map(async (path) => {
+      if (isSensitivePath(path)) return { path, content: '' };
+      const content = await git.raw([
+        'diff',
+        '--cached',
+        '--no-ext-diff',
+        '--no-textconv',
+        '--no-renames',
+        '--',
+        path,
+      ]);
+      return {
+        path,
+        content,
+        binary: content.includes('Binary files ') || content.includes('GIT binary patch'),
+      };
+    }),
+  );
 }
 
 export class CommitMessageGenerator {
-  async generateCommitMessage(): Promise<string> {
-    const spinner = logger.spinner('🤖 Analyzing code changes...');
+  constructor(private directory = process.cwd()) {}
 
+  async generateCommitMessage(options: CommitOptions = {}): Promise<string> {
+    if (options.message !== undefined) return validateCommitMessage(options.message);
+    if (!process.stdin.isTTY) throw new Error('Use --message for a non-interactive commit.');
+    const git = simpleGit(this.directory);
+    const reviewedTree = await git.raw(['write-tree']);
+    const count = (await git.raw(['diff', '--cached', '--name-only', '-z']))
+      .split('\0')
+      .filter(Boolean).length;
+    let changes: CommitChange[] | undefined;
+    let message = `chore: update ${count} file${count === 1 ? '' : 's'}`;
+    let ai: ReturnType<typeof resolveAIConfig>;
     try {
-      const diff = execSync('git diff --cached', { encoding: 'utf-8' });
-
-      if (!diff.trim()) {
-        const unstagedDiff = execSync('git diff', { encoding: 'utf-8' });
-        if (!unstagedDiff.trim()) {
-          spinner.stop();
-          return 'chore: update code';
-        }
-      }
-
-      spinner.text = '✨ Analyzing changes...';
-
-      const commitMessage = this.analyzeSpecificChanges(diff);
-
-      spinner.succeed('✅ Commit message generated');
-      return commitMessage;
+      ai = resolveAIConfig();
     } catch {
-      spinner.fail('Failed to generate commit message');
-      return 'chore: update code';
+      logger.warn(
+        'Invalid AI settings. Run forjex ai configure; manual messages are still available.',
+      );
+      ai = { provider: 'openai', model: DEFAULT_AI_MODEL, apiKey: '', keySource: 'not configured' };
     }
-  }
-
-  private analyzeSpecificChanges(diff: string): string {
-    const fileChanges = this.extractFileChanges(diff);
-
-    if (fileChanges.length === 0) {
-      return 'chore: update code';
+    let useAI = Boolean(options.ai);
+    if (!useAI && process.stdin.isTTY && ai.apiKey) {
+      ({ useAI } = await inquirer.prompt([
+        {
+          type: 'confirm',
+          name: 'useAI',
+          message: `Generate a commit message with ${AI_PROVIDERS[ai.provider].label}? Filtered changes will be sent to this provider.`,
+          default: false,
+        },
+      ]));
     }
-
-    const primaryChange = fileChanges[0];
-    const fileName = primaryChange.file.split('/').pop() || primaryChange.file;
-
-    const type = this.detectCommitType(primaryChange);
-    const description = this.buildSpecificDescription(primaryChange, fileName);
-
-    return `${type}: ${description}`;
-  }
-
-  private extractFileChanges(diff: string): FileChange[] {
-    const fileChanges: FileChange[] = [];
-    const lines = diff.split('\n');
-
-    let currentFile = '';
-    let currentChange: FileChange = { file: '', added: [], removed: [], modified: [] };
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-
-      const fileMatch = line.match(/^\+\+\+ b\/(.+)$/);
-      if (fileMatch) {
-        if (currentFile && currentChange.file) {
-          fileChanges.push({ ...currentChange });
+    if (useAI && !ai.apiKey)
+      logger.info('Run forjex ai configure to set up your model and API key.');
+    if (useAI) {
+      logger.info(
+        `AI sends bounded text changes to ${AI_PROVIDERS[ai.provider].label}; sensitive paths and recognized secrets are filtered. Review your changes for other confidential content.`,
+      );
+      const spinner = logger.spinner('Generating commit message…');
+      try {
+        changes = await stagedChanges(this.directory);
+        const result = await generateAICommitMessage(changes, {
+          apiKey: ai.apiKey,
+          provider: ai.provider,
+          model: ai.model,
+        });
+        message = result.message;
+        spinner.succeed('Commit message generated');
+        if (result.omitted.length)
+          logger.info(`${result.omitted.length} file(s) excluded from the AI summary.`);
+      } catch (error) {
+        spinner.stop();
+        logger.warn(
+          error instanceof Error ? error.message : 'AI unavailable; enter a message manually.',
+        );
+      }
+    }
+    while (true) {
+      console.log(`\nCommit message:\n${message}\n`);
+      const { action } = await inquirer.prompt([
+        {
+          type: 'rawlist',
+          name: 'action',
+          message: 'Review commit message:',
+          choices: [
+            { name: 'Accept and continue', value: 'accept' },
+            { name: 'Edit message', value: 'edit' },
+            ...(useAI ? [{ name: 'Regenerate with AI', value: 'regenerate' }] : []),
+            { name: 'Cancel', value: 'cancel' },
+          ],
+        },
+      ]);
+      if (action === 'accept') {
+        if ((await git.raw(['write-tree'])) !== reviewedTree) {
+          throw new Error(
+            'Staged changes changed during review. Run the command again to review the current changes.',
+          );
         }
-        currentFile = fileMatch[1];
-        currentChange = { file: currentFile, added: [], removed: [], modified: [] };
-        continue;
+        return validateCommitMessage(message);
       }
-
-      if (!currentFile) continue;
-
-      if (line.startsWith('+') && !line.startsWith('+++')) {
-        const content = line.substring(1).trim();
-
-        if (!content) continue;
-
-        if (content.includes('<button') || content.includes('Button')) {
-          currentChange.added.push('button');
-        } else if (content.includes('<input') || content.includes('Input')) {
-          currentChange.added.push('input field');
-        } else if (content.includes('<form') || content.includes('Form')) {
-          currentChange.added.push('form');
-        } else if (content.match(/function\s+\w+|const\s+\w+\s*=.*=>|async.*function/)) {
-          const funcMatch = content.match(/function\s+(\w+)|const\s+(\w+)\s*=/);
-          const funcName = funcMatch ? funcMatch[1] || funcMatch[2] : 'function';
-          currentChange.added.push(funcName);
-        } else if (content.match(/class\s+(\w+)/)) {
-          const className = content.match(/class\s+(\w+)/)?.[1];
-          currentChange.added.push(`${className} class`);
-        } else if (content.match(/import.*from/)) {
-          const importMatch = content.match(/from\s+['"]([^'"]+)['"]/);
-          const moduleName = importMatch?.[1]?.split('/').pop() || 'dependency';
-          currentChange.added.push(`${moduleName} import`);
-        } else if (content.match(/<[A-Z]\w+/)) {
-          const componentMatch = content.match(/<([A-Z]\w+)/);
-          currentChange.added.push(`${componentMatch?.[1]} component`);
-        } else if (content.includes('useState') || content.includes('useEffect')) {
-          const hookMatch = content.match(/use\w+/);
-          currentChange.added.push(`${hookMatch?.[0]} hook`);
-        } else if (content.length > 10 && !content.startsWith('//') && !content.startsWith('/*')) {
-          const preview = content
-            .substring(0, 30)
-            .replace(/[^\w\s]/g, '')
-            .trim();
-          if (preview) {
-            currentChange.added.push('content');
-          }
-        }
-      }
-
-      if (line.startsWith('-') && !line.startsWith('---')) {
-        const content = line.substring(1).trim();
-
-        if (!content) continue;
-
-        if (content.includes('<button') || content.includes('Button')) {
-          currentChange.removed.push('button');
-        } else if (content.match(/function\s+\w+|const\s+\w+\s*=/)) {
-          const funcMatch = content.match(/function\s+(\w+)|const\s+(\w+)\s*=/);
-          const funcName = funcMatch ? funcMatch[1] || funcMatch[2] : 'function';
-          currentChange.removed.push(funcName);
-        } else if (content.length > 10 && !content.startsWith('//')) {
-          currentChange.removed.push('code');
-        }
-      }
-    }
-
-    if (currentFile && currentChange.file) {
-      fileChanges.push(currentChange);
-    }
-
-    return fileChanges;
-  }
-
-  private detectCommitType(change: FileChange): string {
-    const { file, added, removed } = change;
-
-    if (file.endsWith('.md') || file.includes('README')) {
-      return 'docs';
-    }
-
-    if (file.includes('test') || file.includes('.spec.') || file.includes('.test.')) {
-      return 'test';
-    }
-
-    if (file.endsWith('.css') || file.endsWith('.scss') || file.includes('style')) {
-      return 'style';
-    }
-
-    if (file.includes('config') || file === 'package.json') {
-      return 'chore';
-    }
-
-    if (added.length > removed.length && added.length > 2) {
-      return 'feat';
-    }
-
-    if (file.toLowerCase().includes('fix') || file.toLowerCase().includes('bug')) {
-      return 'fix';
-    }
-
-    if (removed.length > added.length) {
-      return 'refactor';
-    }
-
-    return 'chore';
-  }
-
-  private buildSpecificDescription(change: FileChange, fileName: string): string {
-    const { added, removed } = change;
-    const parts: string[] = [];
-
-    if (added.length > 0) {
-      const uniqueAdded = [...new Set(added)];
-
-      if (uniqueAdded.length === 1) {
-        parts.push(`add ${uniqueAdded[0]} to ${fileName}`);
-      } else if (uniqueAdded.length === 2) {
-        parts.push(`add ${uniqueAdded[0]} and ${uniqueAdded[1]} to ${fileName}`);
-      } else {
-        const items = uniqueAdded.slice(0, 2).join(', ');
-        parts.push(`add ${items} to ${fileName}`);
-      }
-    }
-
-    if (removed.length > 0) {
-      const uniqueRemoved = [...new Set(removed)];
-
-      if (uniqueRemoved.length === 1) {
-        if (parts.length > 0) {
-          parts.push(`remove ${uniqueRemoved[0]}`);
-        } else {
-          parts.push(`remove ${uniqueRemoved[0]} from ${fileName}`);
+      if (action === 'cancel') throw new Error('Commit cancelled. Your changes are still staged.');
+      if (action === 'regenerate') {
+        try {
+          changes ??= await stagedChanges(this.directory);
+          message = (
+            await generateAICommitMessage(changes, {
+              apiKey: ai.apiKey,
+              provider: ai.provider,
+              model: ai.model,
+            })
+          ).message;
+        } catch (error) {
+          logger.warn(error instanceof Error ? error.message : 'AI unavailable.');
         }
       } else {
-        if (parts.length > 0) {
-          parts.push(`remove ${uniqueRemoved.length} items`);
-        } else {
-          parts.push(`remove ${uniqueRemoved.length} items from ${fileName}`);
-        }
+        ({ message } = await inquirer.prompt([
+          {
+            type: 'editor',
+            name: 'message',
+            message: 'Commit message:',
+            default: message,
+            validate: (value: string) => {
+              try {
+                validateCommitMessage(value);
+                return true;
+              } catch {
+                return 'A message is required (maximum 4000 characters).';
+              }
+            },
+          },
+        ]));
       }
     }
-
-    if (added.length > 0 && removed.length > 0 && parts.length === 0) {
-      parts.push(`update ${fileName}`);
-    }
-
-    if (parts.length === 0) {
-      if (added.length > 0) {
-        parts.push(`update ${fileName}`);
-      } else if (removed.length > 0) {
-        parts.push(`clean up ${fileName}`);
-      } else {
-        parts.push(`modify ${fileName}`);
-      }
-    }
-
-    return parts.join(' and ');
   }
 }

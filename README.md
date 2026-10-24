@@ -30,6 +30,8 @@ cd my-app
 npm run dev
 ```
 
+After creation, the CLI offers to continue into GitHub, optional CI/CD, and deployment. Choose No to finish locally, or pass `--no-setup` to skip that prompt. Non-interactive creation finishes locally.
+
 Choose **Yes** when prompted to install dependencies. If you skip that step, run `npm install` before starting the development server.
 
 You can also run Forjex without a global installation:
@@ -83,6 +85,8 @@ The Next.js, React, and Vue starters include:
 - Application configuration, route constants, styles, and design tokens.
 - A typed JSON API client with error and cancellation handling.
 - ESLint, Prettier, Vitest, and example tests.
+- A Forjex welcome page with a rotating logo and reduced-motion support.
+- A `/docs` page describing the generated files and commands.
 - Environment examples, a `.gitignore`, a README, and Forjex favicon assets.
 
 The Next.js starter also includes loading, error, not-found, and health-route examples.
@@ -119,13 +123,13 @@ API-client tests use mocked requests. Configure the optional API origin in your 
 ### Create files without installing dependencies
 
 ```bash
-forjex create my-app --template react --no-install
+forjex create my-app --template react --no-install --no-setup
 cd my-app
 npm install
 npm run dev
 ```
 
-The `create` command generates local project files. It does not initialize Git, create a GitHub repository, add CI, or deploy your application.
+With `--no-setup`, `create` finishes after generating local files. Otherwise, interactive creation offers to continue into optional GitHub, CI/CD, and deployment setup.
 
 ## Connect GitHub and deploy
 
@@ -135,7 +139,7 @@ The `create` command generates local project files. It does not initialize Git, 
 forjex forge my-app --template nextjs
 ```
 
-Forjex creates the starter and asks whether you want to set up GitHub now. You can stop there and continue later. Install frontend dependencies before continuing to GitHub setup; the CLI runs a local build check before pushing.
+Forjex creates the starter and asks whether you want to set up GitHub now. You can stop there and continue later. When frontend dependencies are installed, the CLI runs a local build check before pushing. If you skip installation for a new starter, it reports that local build verification was skipped.
 
 To select CI and Vercel deployment when continuing through the guided setup:
 
@@ -180,8 +184,10 @@ Vercel setup writes `vercel.json`, runs a production deployment, and attempts to
 
 | Command                        | Purpose                                                                         |
 | ------------------------------ | ------------------------------------------------------------------------------- |
-| `forjex create [name]`         | Create a local starter; prompts for missing details                             |
+| `forjex create [name]`         | Create a starter and optionally continue into GitHub setup                      |
 | `forjex forge [name]`          | Guide a new or existing project through GitHub and optional CI/deployment setup |
+| `forjex ai configure`          | Choose an AI provider, model, and optional saved API key                        |
+| `forjex push [--ai]`           | Commit staged changes and push the current branch; optional AI messages         |
 | `forjex login`                 | Connect the CLI to Forjex Cloud through the browser                             |
 | `forjex login --token <token>` | Validate and save a GitHub personal access token                                |
 | `forjex whoami`                | Show saved identity, credential availability, and Cloud connection status       |
@@ -283,3 +289,40 @@ Every contribution starts with an issue. Wait for explicit maintainer approval b
 ## License
 
 [MIT](LICENSE) © David Mgbede.
+
+## Commit and push with AI (1.8.0)
+
+After connecting a repository, use `forjex push` to commit and push the current branch to its existing `origin`. It uses the files already staged in Git. If nothing is staged, the interactive CLI offers to stage the changes shown in its status summary. It preserves unstaged changes when an index already exists. Existing commits keep their messages.
+
+```bash
+# Choose your model and configure API access:
+forjex ai configure
+forjex ai status
+forjex push --ai
+
+# Or supply a message without AI:
+forjex push -m "feat: add project search"
+```
+
+AI is optional. The CLI sends a bounded snapshot of staged text diffs to your selected provider and lets you accept, edit, regenerate, or cancel before committing. It excludes sensitive paths and binary content, and redacts recognized secret patterns. These filters cannot identify all confidential content; review what you stage.
+
+`forjex ai configure` saves your selected provider and model in `~/.forjex/ai.json`. Saving a key is optional and requires confirmation; the local file is plaintext with user-only permissions (`0600`). Otherwise set the selected provider’s API-key environment variable listed below. `forjex ai status` shows the effective model and key source without showing the key. `forjex ai clear` removes saved AI settings separately from GitHub/Vercel login. Environment variables override saved settings; `FORJEX_AI_PROVIDER` selects the provider and `FORJEX_AI_MODEL` selects its model. OpenAI defaults to `gpt-4.1-mini`; enter a model ID for other providers. Changing provider never reuses a key saved for a different provider. No extra AI SDK is required. Set keys in the terminal, never in a generated browser app's public environment variables.
+
+`forjex create my-app --template nextjs --ai` also offers AI during the subsequent repository setup. `forjex forge --ai` supports it for existing projects. If AI fails, you can edit or accept a local fallback message. Non-interactive pushes require `--message` when there are staged changes; files must already be staged.
+
+In the cloud wizard, the Pipelines step includes an optional commit-message editor. Connect GitHub, choose a provider and its model ID, enter that provider’s API key, and choose **Generate with AI**. The model stays in page memory and is sent with each generation request. The key is sent over the request to the Forjex server and used only to contact the selected provider; it is kept in page memory, never saved to storage, and cleared after a successful forge or wizard reset. Review or edit the message before choosing **Forge Project Now**. Generation previews planned file additions without writing to GitHub. If those additions change before setup runs, Forjex asks for a new preview. A message is only used when setup actually creates a commit.
+
+Cloud generation describes the starter/configuration changes the wizard prepares. It cannot inspect unpushed local files. Use the CLI for your local development commits. OpenAI requests disable response storage. Other providers apply their own data policies; usage is billed to the selected provider account. Text-generation models must support the selected provider API and return a JSON commit message. OpenAI models must support Responses API structured outputs. Refusals, invalid responses, and incomplete output leave manual messages available. Embedding and image-only models are not supported.
+
+### AI providers
+
+| Provider                                                                                 | `FORJEX_AI_PROVIDER` | API-key environment variable           |
+| ---------------------------------------------------------------------------------------- | -------------------- | -------------------------------------- |
+| [OpenAI](https://developers.openai.com/api/docs/guides/text)                             | `openai`             | `OPENAI_API_KEY`                       |
+| [OpenRouter](https://openrouter.ai/docs/api/api-reference/chat/create-a-chat-completion) | `openrouter`         | `OPENROUTER_API_KEY`                   |
+| [Google Gemini](https://ai.google.dev/api/generate-content)                              | `gemini`             | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) |
+| [Grok / xAI](https://docs.x.ai/developers/rest-api-reference/inference/chat-completions) | `grok`               | `XAI_API_KEY`                          |
+| [Anthropic Claude](https://platform.claude.com/docs/en/api/messages/create)              | `anthropic`          | `ANTHROPIC_API_KEY`                    |
+| [Mistral](https://docs.mistral.ai/api)                                                   | `mistral`            | `MISTRAL_API_KEY`                      |
+
+For OpenRouter, enter the full `author/model` identifier, including suffixes such as `:free` when applicable. In the cloud wizard, switching provider clears the previous key and model so credentials are never silently reused with another service. The CLI saves one active provider configuration at a time. Use a model available to your provider account; the provider determines availability and access.

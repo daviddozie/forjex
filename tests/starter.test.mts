@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import {
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  rmSync,
+  realpathSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -59,7 +66,7 @@ test('framework aliases resolve to supported starters', () => {
   assert.equal(normalizeTemplate('rust-app'), 'rust');
 });
 
-test('frontend starters include real ICO assets, quality tools, and no branded logo component', () => {
+test('frontend starters include real ICO assets and quality tools', () => {
   const parent = mkdtempSync(join(tmpdir(), 'forjex-foundation-'));
   try {
     for (const template of ['nextjs', 'react', 'vue']) {
@@ -105,6 +112,100 @@ test('the CLI accepts template options, creates locally, and reports invalid inp
     assert.match(invalid.stdout + invalid.stderr, /Unknown template/);
     assert.equal(existsSync(join(parent, 'bad-app')), false);
   } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('web starters introduce Forjex and document every generated file with a working docs entry', () => {
+  const parent = mkdtempSync(join(tmpdir(), 'forjex-branded-'));
+  try {
+    for (const template of ['nextjs', 'react', 'vue']) {
+      const directory = createStarter(`brand-${template}`, template, parent);
+      const home = readFileSync(
+        join(
+          directory,
+          template === 'vue'
+            ? 'src/features/home/components/HomeScreen.vue'
+            : 'src/features/home/components/home-screen.tsx',
+        ),
+        'utf8',
+      );
+      assert.match(home, /starts with/);
+      assert.match(home, /Forjex\./);
+      assert.match(home, /logo-orbit/);
+      assert.doesNotMatch(home, /siteConfig.name.*starts here/);
+      assert.match(
+        readFileSync(join(directory, 'src/styles/globals.css'), 'utf8'),
+        /prefers-reduced-motion/,
+      );
+      const guide = readFileSync(join(directory, 'src/features/docs/file-guide.ts'), 'utf8');
+      const inventory = JSON.parse(
+        guide.replace('export const fileGuide = ', '').replace(/;\s*$/, ''),
+      );
+      for (const file of inventory) {
+        assert.ok(
+          existsSync(join(directory, file.path)),
+          `guide path exists: ${template}/${file.path}`,
+        );
+        assert.notEqual(file.description, 'Framework support file for this starter.', file.path);
+      }
+      if (template === 'nextjs') assert.ok(existsSync(join(directory, 'src/app/docs/page.tsx')));
+      else
+        assert.match(
+          readFileSync(join(directory, template === 'vue' ? 'src/App.vue' : 'src/App.tsx'), 'utf8'),
+          /StarterDocs/,
+        );
+    }
+  } finally {
+    rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('interactive create continues setup in the generated directory and restores the caller directory', async () => {
+  const inquirer = (await import('inquirer')).default;
+  const { createAndSetupCommand } = await import('../src/commands/create');
+  const { GitHubService } = await import('../src/services/github');
+  const parent = mkdtempSync(join(tmpdir(), 'forjex-continue-'));
+  const originalDirectory = process.cwd();
+  const prompt = inquirer.prompt;
+  const authenticate = GitHubService.prototype.authenticate;
+  const tty = Object.getOwnPropertyDescriptor(process.stdin, 'isTTY');
+  const log = console.log;
+  const previousExit = process.exitCode;
+  const names: string[] = [];
+  let authenticatedFrom = '';
+  try {
+    process.chdir(parent);
+    Object.defineProperty(process.stdin, 'isTTY', { configurable: true, value: true });
+    console.log = () => {};
+    (inquirer as any).prompt = async (questions: any[]) => {
+      const name = questions[0].name;
+      names.push(name);
+      const answers: Record<string, unknown> = {
+        continueSetup: true,
+        repoChoice: 'github-new',
+        addCICD: false,
+        deployVercel: false,
+      };
+      assert.ok(name in answers, `unexpected prompt: ${name}`);
+      return { [name]: answers[name] };
+    };
+    GitHubService.prototype.authenticate = async () => {
+      authenticatedFrom = process.cwd();
+      throw new Error('Test stops before any provider writes');
+    };
+    await createAndSetupCommand('continuous-app', { template: 'nextjs', install: false });
+    assert.equal(authenticatedFrom, realpathSync(join(parent, 'continuous-app')));
+    assert.deepEqual(names, ['continueSetup', 'repoChoice', 'addCICD', 'deployVercel']);
+    assert.equal(process.cwd(), realpathSync(parent));
+  } finally {
+    process.chdir(originalDirectory);
+    inquirer.prompt = prompt;
+    GitHubService.prototype.authenticate = authenticate;
+    if (tty) Object.defineProperty(process.stdin, 'isTTY', tty);
+    else delete (process.stdin as any).isTTY;
+    console.log = log;
+    process.exitCode = previousExit;
     rmSync(parent, { recursive: true, force: true });
   }
 });

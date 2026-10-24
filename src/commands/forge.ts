@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { createCommand, type StarterOptions } from './create.js';
 import inquirer from 'inquirer';
 import figlet from 'figlet';
@@ -12,7 +13,11 @@ import { logger } from '../utils/logger.js';
 import { getCloudUrl } from '../utils/config.js';
 import type { RepoOptions } from '../types/index.js';
 
-export async function forgeCommand(name?: string, options: StarterOptions = {}): Promise<void> {
+export async function forgeCommand(
+  name?: string,
+  options: StarterOptions = {},
+  preparedStarter?: { directory: string; template: string },
+): Promise<void> {
   const originalDirectory = process.cwd();
   try {
     console.log('\n');
@@ -28,7 +33,7 @@ export async function forgeCommand(name?: string, options: StarterOptions = {}):
     console.log(chalk.gray('  ━'.repeat(25)));
     console.log('\n');
 
-    let startNew = Boolean(name || options.template);
+    let startNew = Boolean(preparedStarter || name || options.template);
     if (!startNew) {
       const { projectMode } = await inquirer.prompt([
         {
@@ -45,26 +50,20 @@ export async function forgeCommand(name?: string, options: StarterOptions = {}):
     }
     let starterTemplate: string | undefined;
     if (startNew) {
-      const starter = await createCommand(name, options);
+      const starter = preparedStarter || (await createCommand(name, options));
       starterTemplate = starter.template;
-      const { continueSetup } = await inquirer.prompt([
-        {
-          type: 'confirm',
-          name: 'continueSetup',
-          message: 'Set up GitHub for this project now?',
-          default: false,
-        },
-      ]);
+      const { continueSetup } = preparedStarter
+        ? { continueSetup: true }
+        : await inquirer.prompt([
+            {
+              type: 'confirm',
+              name: 'continueSetup',
+              message: 'Set up GitHub for this project now?',
+              default: true,
+            },
+          ]);
       if (!continueSetup) return;
-      if (['nextjs', 'react', 'vue'].includes(starterTemplate)) {
-        const { existsSync } = await import('node:fs');
-        if (!existsSync(`${starter.directory}/node_modules`)) {
-          logger.info(
-            'Install dependencies first, then run forjex forge from the new project directory.',
-          );
-          return;
-        }
-      } else if (options.vercel) {
+      if (!['nextjs', 'react', 'vue'].includes(starterTemplate) && options.vercel) {
         throw new Error(
           'Vercel setup is available for Next.js, React, and Vue starters. Your local project has been created.',
         );
@@ -279,7 +278,17 @@ export async function forgeCommand(name?: string, options: StarterOptions = {}):
 
       const gitService = new GitService();
 
-      await gitService.runBuildCheck(projectConfig);
+      if (
+        starterTemplate &&
+        ['nextjs', 'react', 'vue'].includes(starterTemplate) &&
+        !existsSync('node_modules')
+      ) {
+        logger.warn(
+          'Local build check skipped: dependencies were not installed. Install and run npm run check before shipping.',
+        );
+      } else {
+        await gitService.runBuildCheck(projectConfig);
+      }
       console.log('\n');
 
       console.log(chalk.blue.bold('  STEP 5: Pushing Code to GitHub\n'));
@@ -307,7 +316,7 @@ export async function forgeCommand(name?: string, options: StarterOptions = {}):
         }
       }
 
-      await gitService.initAndPush(repoUrl, isExisting);
+      await gitService.initAndPush(repoUrl, isExisting, { ai: options.ai });
       console.log('\n');
     }
 

@@ -42,6 +42,7 @@ function github({
     const path = decodeURIComponent(url.pathname);
     const body = init?.body ? JSON.parse(String(init.body)) : null;
     calls.push({ method, path, query: url.search, body });
+    if (method === 'GET' && path === '/user') return Response.json({ login: 'team' });
     if (method === 'POST' && path === '/user/repos')
       return Response.json(repository, { status: 201 });
     if (method === 'GET' && path === '/repos/team/existing-app') return Response.json(repository);
@@ -222,4 +223,101 @@ test('connecting never replaces a source file used as a configuration parent dir
     (error: any) => error.status === 409 && /not a directory/.test(error.message),
   );
   assert.deepEqual(writes(calls), []);
+});
+
+test('a reviewed custom commit message is used without changing commit ancestry', async () => {
+  const { client, calls } = github();
+  await forgeRepository(client, {
+    ...options,
+    commitMessage: 'ci: add verified pipeline\n\nConfigure checks on the default branch.',
+  });
+  const commit = calls.find((call) => call.path.endsWith('/git/commits'))!;
+  assert.equal(
+    commit.body.message,
+    'ci: add verified pipeline\n\nConfigure checks on the default branch.',
+  );
+  assert.deepEqual(commit.body.parents, ['head-before']);
+});
+
+test('cloud preview reads only and refuses to commit if planned additions changed', async () => {
+  const { prepareForgeChanges, commitPlanHash } = await import('../src/lib/forge-repository');
+  const initial = github();
+  const plan = await prepareForgeChanges(
+    initial.client,
+    options,
+    'team',
+    'existing-app',
+    'release/v1',
+  );
+  assert.deepEqual(writes(initial.calls), []);
+  const hash = commitPlanHash(plan.additions, options);
+  const changed = github({ files: ['vercel.json'] });
+  await assert.rejects(
+    forgeRepository(changed.client, {
+      ...options,
+      commitMessage: 'ci: configure project',
+      commitPlanHash: hash,
+    }),
+    (error: any) => error.status === 409,
+  );
+  assert.deepEqual(writes(changed.calls), []);
+  await forgeRepository(initial.client, {
+    ...options,
+    commitMessage: 'ci: configure project',
+    commitPlanHash: hash,
+  });
+  assert.equal(
+    initial.calls.find((call) => call.path.endsWith('/git/commits'))!.body.message,
+    'ci: configure project',
+  );
+});
+
+test('new project AI previews allow GitHub to assign the default branch without changing the planned file set', async () => {
+  const { prepareForgeChanges, commitPlanHash } = await import('../src/lib/forge-repository');
+  const { client } = github();
+  const settings = { ...options, repoMode: 'new' as const, name: 'existing-app' };
+  const preview = await prepareForgeChanges(client, settings, 'team', 'existing-app', 'main');
+  const actual = await prepareForgeChanges(client, settings, 'team', 'existing-app', 'release/v1');
+  assert.equal(
+    commitPlanHash(preview.additions, settings),
+    commitPlanHash(actual.additions, settings),
+  );
+  assert.notEqual(
+    commitPlanHash(preview.additions.slice(1), settings),
+    commitPlanHash(actual.additions, settings),
+  );
+});
+
+test('a stale new-project AI preview is rejected before creating any GitHub resources', async () => {
+  const { client, calls } = github();
+  await assert.rejects(
+    forgeRepository(client, {
+      ...options,
+      repoMode: 'new',
+      name: 'requested-app',
+      commitPlanHash: '0'.repeat(64),
+    }),
+    (error: any) => error.status === 409,
+  );
+  assert.deepEqual(writes(calls), []);
+  assert.deepEqual(
+    calls.map((call) => call.path),
+    ['/user'],
+  );
+});
+
+test('a valid new-project preview is checked before creation and tolerates GitHub name normalization', async () => {
+  const { prepareForgeChanges, commitPlanHash } = await import('../src/lib/forge-repository');
+  const { client, calls } = github();
+  const settings = { ...options, repoMode: 'new' as const, name: 'requested-app' };
+  const planned = await prepareForgeChanges(client, settings, 'team', 'requested-app', 'main');
+  await forgeRepository(client, {
+    ...settings,
+    commitPlanHash: commitPlanHash(planned.additions, settings),
+  });
+  assert.deepEqual(
+    calls.slice(0, 2).map((call) => call.path),
+    ['/user', '/user/repos'],
+  );
+  assert.ok(calls.some((call) => call.path.endsWith('/git/commits') && call.method === 'POST'));
 });

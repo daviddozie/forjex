@@ -240,6 +240,9 @@ export class VercelService {
       if (projectConfig.buildCommand) {
         config.buildCommand = projectConfig.buildCommand;
       }
+      if (['vue', 'vite-react'].includes(projectConfig.framework || '')) {
+        config.rewrites = [{ source: '/docs', destination: '/index.html' }];
+      }
     }
 
     writeFileSync('vercel.json', JSON.stringify(config, null, 2));

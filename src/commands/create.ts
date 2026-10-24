@@ -14,6 +14,8 @@ export interface StarterOptions {
   install?: boolean;
   ci?: boolean;
   vercel?: boolean;
+  setup?: boolean;
+  ai?: boolean;
 }
 
 export async function createCommand(
@@ -67,8 +69,27 @@ export async function createCommand(
     if (installed && command === 'npm install') continue;
     console.log(chalk.cyan(`  ${command}`));
   }
-  console.log(
-    '\nRun forjex forge inside the project whenever you want to set up GitHub, CI/CD, and deployment.\n',
-  );
   return { directory, template };
+}
+
+export async function createAndSetupCommand(name?: string, options: StarterOptions = {}) {
+  const starter = await createCommand(name, options);
+  if (options.setup !== false && process.stdin.isTTY) {
+    const { continueSetup } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'continueSetup',
+        message: 'Continue with GitHub, optional CI/CD, and deployment?',
+        default: true,
+      },
+    ]);
+    if (continueSetup) {
+      const { forgeCommand } = await import('./forge.js');
+      await forgeCommand(undefined, options, starter);
+      return;
+    }
+  }
+  console.log(
+    '\nYour local project is ready. Run forjex forge inside it to connect GitHub, CI/CD, and deployment later.\n',
+  );
 }

@@ -115,7 +115,7 @@ jobs:
         }
 
     - name: 📥 Install dependencies
-      run: ${this.getInstallCommand(packageManager!)}
+      run: ${this.hasLockFile(packageManager!) ? this.getInstallCommand(packageManager!) : `${packageManager!} install`}
 
     - name: 🔍 Lint code
       run: ${packageManager} run lint || echo "No lint script found"

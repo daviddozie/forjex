@@ -1,3 +1,4 @@
+import { validateCommitMessage } from '../../../../../../src/ai/commit-message';
 import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
@@ -107,7 +108,22 @@ export async function POST(request: Request) {
       deployVercel = true,
       manualGithubToken,
       manualVercelToken,
+      commitMessage,
+      commitPlanHash,
     } = body;
+
+    if (commitMessage !== undefined) {
+      try {
+        validateCommitMessage(commitMessage);
+      } catch {
+        return NextResponse.json({ error: 'Invalid commit message.' }, { status: 400 });
+      }
+    }
+    if (
+      commitPlanHash !== undefined &&
+      (typeof commitPlanHash !== 'string' || !/^[a-f0-9]{64}$/.test(commitPlanHash))
+    )
+      return NextResponse.json({ error: 'Invalid commit preview.' }, { status: 400 });
 
     if (!['new', 'existing'].includes(repoMode))
       return NextResponse.json({ error: 'Invalid repository action' }, { status: 400 });
@@ -151,6 +167,8 @@ export async function POST(request: Request) {
           addReadme,
           addCICD,
           deployVercel,
+          commitMessage,
+          commitPlanHash,
         });
         const repo = prepared.repository;
         const owner = repo.owner.login;
