@@ -47,7 +47,7 @@
   "dependencies": {
     "@octokit/auth-oauth-device": "^8.0.3",
     "@octokit/rest": "^22.0.1",
-    "@vercel/client": "^17.2.12",
+    "@vercel/client": "^18.10.0",
     "axios": "^1.13.2",
     "chalk": "^5.6.2",
     "commander": "^14.0.2",
